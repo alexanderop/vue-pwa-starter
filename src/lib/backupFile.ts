@@ -19,7 +19,7 @@ const BACKUP_FILENAME_STEM = 'vue-pwa-starter-backup'
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Moving a backup across the browser's file boundary failed. */
-export class BackupFileError extends Schema.TaggedErrorClass<BackupFileError>()(
+export class BackupFileError extends Schema.TaggedError<BackupFileError>()(
   'BackupFile.BackupFileError',
   {
     operation: Schema.String,

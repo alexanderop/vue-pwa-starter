@@ -18,8 +18,8 @@ catalogs:
     '@vueuse/core': ^14.3.0
     dexie: ^4.4.4
     # Pinned exactly — ~/Projects/opensource/effect is checked out at this version
-    # (branch pinned/4.0.0-beta.101) as the agent-readable source of truth.
-    effect: 4.0.0-beta.101
+    # (branch pinned/4.0.0-beta.105) as the agent-readable source of truth.
+    effect: 4.0.0-beta.105
     vue: 3.5.38
     vue-i18n: ^11.4.6
     vue-router: ^5.1.0
@@ -39,7 +39,7 @@ catalogs:
     size-limit: ^12.1.0
   testing:
     # Pinned exactly, in lockstep with the `effect` pin in catalog frontend.
-    '@effect/vitest': 4.0.0-beta.101
+    '@effect/vitest': 4.0.0-beta.105
     '@playwright/test': ^1.61.1
     '@vitest/browser': ^4.1.10
     '@vitest/browser-playwright': ^4.1.10

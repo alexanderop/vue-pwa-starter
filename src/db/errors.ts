@@ -18,13 +18,13 @@ import { Schema } from 'effect'
  */
 
 /** An IndexedDB operation failed (quota exceeded, private browsing, …). */
-export class DatabaseError extends Schema.TaggedErrorClass<DatabaseError>()('Db.DatabaseError', {
+export class DatabaseError extends Schema.TaggedError<DatabaseError>()('Db.DatabaseError', {
   operation: Schema.String,
   cause: Schema.Defect(),
 }) {}
 
 /** The payload handed to importData is not a backup this app understands. */
-export class BackupInvalidError extends Schema.TaggedErrorClass<BackupInvalidError>()(
+export class BackupInvalidError extends Schema.TaggedError<BackupInvalidError>()(
   'Db.BackupInvalidError',
   {
     message: Schema.String,
@@ -37,7 +37,7 @@ export class BackupInvalidError extends Schema.TaggedErrorClass<BackupInvalidErr
  * carrying it as its own tag lets a form say "title required" instead of
  * showing the generic "could not be saved".
  */
-export class NoteInvalidError extends Schema.TaggedErrorClass<NoteInvalidError>()(
+export class NoteInvalidError extends Schema.TaggedError<NoteInvalidError>()(
   'Db.NoteInvalidError',
   {
     message: Schema.String,
