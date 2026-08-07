@@ -7,6 +7,9 @@
          on notched devices when the app is installed as a standalone PWA. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Local-first Vue PWA starter with a complete testing strategy" />
+    <!-- Correct chrome color before any JS runs. These only see the OS
+         preference, so src/lib/themeColor.ts replaces them with a single
+         unconditional tag once the app knows the user's actual theme. -->
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <title>Vue PWA Starter</title>

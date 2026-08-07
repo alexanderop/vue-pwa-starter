@@ -36,10 +36,17 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
-            urlPattern: ({ request }) =>
-              request.destination === 'style' ||
-              request.destination === 'script' ||
-              request.destination === 'worker',
+            // `sameOrigin` is load-bearing, not tidiness: a cross-origin
+            // request (a CDN <script>, a webfont stylesheet) with no CORS
+            // headers returns an *opaque* response, which Chrome pads to
+            // ~7 MB of quota each — on the same quota IndexedDB draws from.
+            // A handful of them can push the origin over and get the user's
+            // notes evicted. Keep the origin check when adding destinations.
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin &&
+              (request.destination === 'style' ||
+                request.destination === 'script' ||
+                request.destination === 'worker'),
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'static-resources',

@@ -13,15 +13,19 @@ const { needRefresh, reload, dismiss } = usePwaUpdate()
 </script>
 
 <template>
-  <div
-    v-if="needRefresh"
-    role="status"
-    class="fixed inset-x-4 bottom-24 z-50 flex items-center gap-2 rounded-lg border bg-card p-3 shadow-lg sm:right-6 sm:left-auto sm:max-w-sm"
-  >
-    <p class="flex-1 text-sm">{{ t('pwa.updateAvailable') }}</p>
-    <Button size="sm" @click="reload">{{ t('pwa.reload') }}</Button>
-    <Button variant="ghost" size="icon" :aria-label="t('pwa.dismiss')" @click="dismiss">
-      <X />
-    </Button>
+  <!-- The live region stays mounted so screen readers are already observing it
+       when the banner appears; a region created together with its content is
+       not announced. Same pattern as ToastViewport.vue. -->
+  <div role="status" aria-live="polite" aria-atomic="true">
+    <div
+      v-if="needRefresh"
+      class="fixed inset-x-4 bottom-24 z-50 flex items-center gap-2 rounded-lg border bg-card p-3 shadow-lg sm:right-6 sm:left-auto sm:max-w-sm"
+    >
+      <p class="flex-1 text-sm">{{ t('pwa.updateAvailable') }}</p>
+      <Button size="sm" @click="reload">{{ t('pwa.reload') }}</Button>
+      <Button variant="ghost" size="icon" :aria-label="t('pwa.dismiss')" @click="dismiss">
+        <X />
+      </Button>
+    </div>
   </div>
 </template>
