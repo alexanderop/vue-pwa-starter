@@ -18,7 +18,7 @@ declare module 'vue-router' {
   }
 }
 
-export const routes: Array<RouteRecordRaw> = [
+const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: RouteNames.notes,

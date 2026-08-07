@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { toNote } from './converters'
 import { db } from './schema'
 
-export const BACKUP_VERSION = 2
+const BACKUP_VERSION = 2
 
 // Accepts both current (v2) and legacy (v1) note shapes — the converter
 // normalizes on import. Data exported by any historical version of the app

@@ -16,6 +16,7 @@ export default defineConfigWithVueTs(
       '**/dev-dist/**',
       '**/coverage/**',
       '**/.features-gen/**',
+      '**/.vitest/**',
       '**/test-results/**',
       '**/playwright-report/**',
     ],
@@ -23,6 +24,25 @@ export default defineConfigWithVueTs(
 
   pluginVue.configs['flat/recommended'],
   vueTsConfigs.recommended,
+
+  {
+    name: 'app/rules',
+    rules: {
+      // Optional props in <script setup lang="ts"> are typed as possibly
+      // undefined — forcing a default on every one adds noise, not safety.
+      'vue/require-default-prop': 'off',
+    },
+  },
+
+  {
+    name: 'app/ui-primitives',
+    files: ['src/components/ui/**/*.vue'],
+    rules: {
+      // shadcn-style primitives are intentionally named after the element
+      // they wrap (Button, Input, Label, …).
+      'vue/multi-word-component-names': 'off',
+    },
+  },
 
   // oxlint runs first (fast, Rust); this disables the ESLint rules it
   // already covers so the two don't double-report.
