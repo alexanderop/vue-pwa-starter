@@ -1,6 +1,6 @@
 import { page } from 'vitest/browser'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { assertNoViolations } from '../helpers/a11y'
+import { assertNoPageLevelViolations, assertNoViolations } from '../helpers/a11y'
 import { renderApp } from '../helpers/renderApp'
 import { resetAppState } from '../helpers/reset'
 
@@ -33,5 +33,18 @@ describe('accessibility', () => {
     await expect.element(page.getByRole('dialog')).toBeVisible()
 
     await assertNoViolations(page.getByRole('dialog').element())
+  })
+
+  // Container-scoped sweeps skip every rule axe classifies as page-level —
+  // landmark structure, heading-one, region. These run against the document
+  // so they actually execute; see the helper for what is and isn't included.
+  it.each([
+    ['notes home', '/'],
+    ['settings', '/settings'],
+  ])('%s has a sound page structure', async (_name, path) => {
+    const app = await renderApp(path)
+    cleanup = app.cleanup
+
+    await assertNoPageLevelViolations()
   })
 })
