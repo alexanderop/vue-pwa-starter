@@ -64,11 +64,21 @@ function handleOpenAutoFocus(event: Event): void {
       @open-auto-focus="handleOpenAutoFocus"
     >
       <!-- Drag handle (mobile only) -->
-      <div class="flex justify-center pb-2 sm:hidden">
+      <div class="flex shrink-0 justify-center pb-2 sm:hidden">
         <div class="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
       </div>
 
-      <slot />
+      <!-- Scroll region: the sheet is capped at the keyboard-adjusted viewport
+           height, so on a landscape phone with the keyboard open there may be
+           only ~150px left. Everything but the drag handle scrolls, which is
+           what keeps the submit button reachable. `min-h-0` is required — flex
+           items default to min-height:auto and would refuse to shrink. -->
+      <div
+        data-slot="dialog-body"
+        class="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1"
+      >
+        <slot />
+      </div>
 
       <!-- Close button (desktop only) -->
       <DialogClose
