@@ -12,6 +12,11 @@
  * Note: ArchUnitTS analyzes TypeScript imports. <script setup> blocks in
  * .vue files are not parsed, so keep feature logic in .ts modules (where it
  * belongs anyway — that is what makes it unit-testable).
+ *
+ * That blind spot, and the fact that these rules all assert the *absence* of
+ * a violation, is why boundaries.test.ts exists next to this file: it feeds
+ * ESLint deliberate violations — .vue included — and asserts they are caught.
+ * Read the two together; neither is sufficient alone.
  */
 import { readdirSync } from 'node:fs'
 import { projectFiles } from 'archunit'
