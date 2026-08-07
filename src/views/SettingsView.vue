@@ -11,6 +11,7 @@ import { useTheme } from '@/composables/useTheme'
 import { exportData, importData } from '@/db'
 import { useNotesStore } from '@/features/notes/useNotesStore'
 import type { SupportedLocale } from '@/i18n'
+import { downloadBackup, readBackupFile } from '@/lib/backupFile'
 import { useToastStore } from '@/stores/toast'
 
 const { t } = useI18n()
@@ -19,9 +20,13 @@ const { locale, setLocale, supportedLocales } = useLocale()
 const toast = useToastStore()
 const notesStore = useNotesStore()
 
-const LOCALE_LABELS: Record<SupportedLocale, string> = {
-  en: 'English',
-  de: 'Deutsch',
+/**
+ * Every language is offered in its own name ("Deutsch", never "German"), so
+ * the label is read from that locale's catalog instead of the active one —
+ * one `nativeName` key per catalog, which a new locale brings with it.
+ */
+function localeName(code: SupportedLocale): string {
+  return t('settings.language.nativeName', {}, { locale: code })
 }
 
 function handleLocaleChange(event: Event): void {
@@ -30,14 +35,15 @@ function handleLocaleChange(event: Event): void {
 }
 
 async function handleExport(): Promise<void> {
-  const payload = await exportData()
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `vue-pwa-starter-backup-${payload.exportedAt.slice(0, 10)}.json`
-  link.click()
-  URL.revokeObjectURL(url)
+  try {
+    downloadBackup(await exportData())
+  } catch (error) {
+    // Reading the database or handing the file to the browser failed. A
+    // backup the user believes they saved and did not is the worst outcome
+    // in a local-first app, so the failure is never silent.
+    console.error('[settings] exporting data failed', error)
+    toast.showToast(t('settings.data.exportError'))
+  }
 }
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -49,8 +55,7 @@ async function handleImportFile(event: Event): Promise<void> {
   if (!file) return
 
   try {
-    const payload: unknown = JSON.parse(await file.text())
-    await importData(payload)
+    await importData(await readBackupFile(file))
     await notesStore.load()
     toast.showToast(t('settings.data.importSuccess'))
   } catch {
@@ -83,7 +88,7 @@ async function handleImportFile(event: Event): Promise<void> {
               @change="handleLocaleChange"
             >
               <option v-for="code in supportedLocales" :key="code" :value="code">
-                {{ LOCALE_LABELS[code] }}
+                {{ localeName(code) }}
               </option>
             </select>
           </label>
