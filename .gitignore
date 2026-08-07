@@ -9,6 +9,7 @@ stats.html
 # Caches
 .eslintcache
 .vitest
+.vitest-attachments
 node_modules/.tmp
 
 # Test output

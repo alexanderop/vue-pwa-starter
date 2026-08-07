@@ -31,7 +31,8 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint": "run-s lint:oxlint lint:eslint lint:md",
     "lint:check": "run-s lint:oxlint:check lint:eslint:check lint:md",
-    "format": "prettier --write src/ docs/ test/ *.md",
+    "format": "prettier --write \"**/*.{ts,mts,tsx,vue,js,mjs,cjs,json,css,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,mts,tsx,vue,js,mjs,cjs,json,css,yml,yaml}\"",
     "knip": "knip",
     "size-limit": "size-limit",
     "prepare": "husky"
