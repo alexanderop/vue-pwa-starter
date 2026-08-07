@@ -16,7 +16,8 @@ pnpm dev
 All gates should be green out of the box:
 
 ```bash
-pnpm lint:check && pnpm type-check && pnpm knip   # static gates
+pnpm lint:check && pnpm format:check              # lint + formatting
+pnpm type-check && pnpm knip                      # types + dead code
 pnpm test:unit && pnpm test && pnpm test:a11y     # unit + browser + a11y tiers
 pnpm test:arch && pnpm test:visual                # architecture + visual tiers
 pnpm test:e2e                                     # production build in a real browser
@@ -66,7 +67,7 @@ src/__tests__/     All tests, mirroring the source tree — not colocated
 test/e2e/          playwright-bdd features + steps
 ```
 
-These boundaries are not just documentation — they are enforced by [architecture tests](src/__tests__/architecture/architecture.test.ts).
+These boundaries are not just documentation — they are enforced by [architecture tests](src/__tests__/architecture/architecture.test.ts) over the module graph and by `no-restricted-imports` rules in [eslint.config.ts](eslint.config.ts), which also cover `.vue` files. [A negative test](src/__tests__/architecture/boundaries.test.ts) proves the enforcement actually fires.
 
 ## Adding your first feature
 
@@ -80,7 +81,7 @@ The notes feature is scaffolding. To remove it:
 2. Remove the notes entries from `src/router/index.ts`, `src/router/navigation.ts`, and the `notes`/`quickAdd` keys from `src/i18n/messages/*`.
 3. Replace the `notes` table in `src/db/schema.ts` (and `repositories/`, `backup.ts`) with your own.
 4. Remove the `QuickAddNoteSheet` wiring from `src/App.vue` (keep the `#center-action` slot if you want a FAB).
-5. Run `pnpm lint:check && pnpm type-check && pnpm knip` — the gates will point at anything you missed.
+5. Run `pnpm lint:check && pnpm format:check && pnpm type-check && pnpm knip` — the gates will point at anything you missed.
 
 ## License
 

@@ -6,7 +6,7 @@ The notes feature (`src/features/notes`) is the worked example — this walkthro
 
 - Add the table to `src/db/schema.ts`. New table on a fresh install → just add it to the **current** version's `stores()`. Changing an existing table → bump the version, write an `upgrade()`, and widen the `Stored*` type (see the v1→v2 example).
 - Add a converter in `src/db/converters.ts` — reads must produce complete domain objects from any historical shape.
-- Add a repository in `src/db/repositories/` and re-export it from `src/db/index.ts`. Nothing outside `src/db` may import deeper than the index (the arch tests will fail your PR if it does).
+- Add a repository in `src/db/repositories/` and re-export it from `src/db/index.ts`. Nothing outside `src/db` may import deeper than the index — ESLint fails on the import and the arch tests fail your PR.
 - Add the table to `src/db/backup.ts` in the same commit.
 - **Tests**: converter → unit tier; repository CRUD + backup round-trip → `src/__tests__/db/`.
 
@@ -46,7 +46,7 @@ For a feature the size of notes, the full set is roughly:
 ## 6. Ship
 
 ```bash
-pnpm lint:check && pnpm type-check && pnpm knip
+pnpm lint:check && pnpm format:check && pnpm type-check && pnpm knip
 pnpm test:unit && pnpm test && pnpm test:a11y && pnpm test:arch
 ```
 

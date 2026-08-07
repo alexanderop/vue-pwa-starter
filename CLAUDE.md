@@ -17,6 +17,7 @@ pnpm test:visual    # Screenshot comparisons (test:visual:update to rebaseline)
 pnpm test:arch      # ArchUnitTS boundary rules
 pnpm test:e2e       # playwright-bdd against the production build
 pnpm lint           # oxlint + eslint + markdownlint (fix mode; lint:check to verify)
+pnpm format         # prettier (format:check to verify — CI runs the check)
 pnpm type-check     # vue-tsc --build
 pnpm knip           # Dead exports
 pnpm build          # Production build (+ pnpm size-limit for the budget)
@@ -26,7 +27,7 @@ pnpm build          # Production build (+ pnpm size-limit for the budget)
 
 - **State**: VueUse `createGlobalState()` for shared stores — NOT Pinia. Stores expose `$reset()` for tests.
 - **DB**: all access via `src/db/index.ts` repositories. Schema changes need a version bump + `upgrade()` + converter update — see `src/db/schema.ts` for the worked v1→v2 example and docs/local-first.md for why both.
-- **Features never import other features**; shared layers never import features. Enforced by `src/__tests__/architecture/`.
+- **Features never import other features**; shared layers never import features. Enforced twice: ArchUnitTS in `src/__tests__/architecture/` reads the TypeScript module graph, and `no-restricted-imports` in `eslint.config.ts` covers `.vue` files, which ArchUnitTS does not parse.
 - **Two-way binding**: `const open = defineModel<boolean>('open')`.
 - **i18n**: every user-facing string in `src/i18n/messages/en.ts` and `de.ts`; the schema type makes missing keys a compile error.
 - **Tests are not colocated**: they live in `src/__tests__/`, mirroring the source tree. Which tier a test belongs in: docs/testing-strategy.md.

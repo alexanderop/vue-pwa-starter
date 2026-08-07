@@ -12,7 +12,7 @@ This starter follows the [Ink & Switch local-first ideals](https://www.inkandswi
 
 ### One public surface
 
-All storage access goes through `src/db/index.ts`. Views, features, and composables import repositories from there — never Dexie directly. This is enforced by the architecture tests, and it is what keeps the storage engine swappable (e.g. for a future sync engine).
+All storage access goes through `src/db/index.ts`. Views, features, and composables import repositories from there — never Dexie directly. This is enforced by the ESLint boundary rules and the architecture tests, and it is what keeps the storage engine swappable (e.g. for a future sync engine).
 
 ### Schema changes are migrations plus converters — always both
 
@@ -26,6 +26,14 @@ Why both? Because the migration only sees rows that were in the database at upgr
 > Never trust the shape of stored data; trust the converter.
 
 Both paths are tested: the upgrade in `src/__tests__/db/migration.spec.ts`, the converter in the unit tier, and the backup path in `src/__tests__/db/backup.spec.ts` (which imports a v1-era file).
+
+### Persistent storage is requested at boot
+
+`src/lib/persistentStorage.ts` calls `navigator.storage.persist()` from `src/main.ts`. Without it the origin's storage is *best effort*, and browsers treat that literally: Safari clears IndexedDB after seven days without a visit, Chrome and Firefox clear it when the disk gets tight. There is no server copy here, so eviction is not a cache miss — it is the user's data, gone.
+
+The request can be denied, and browsers decide on their own engagement heuristics (installed to the home screen, bookmarked, used often). The outcome is logged, never surfaced: "the browser might delete your notes" is not something a user can act on. What they can act on is the export, which is why it exists.
+
+The same quota is what the runtime caches in `vite.config.ts` draw from — see the note there on why the cache routes are restricted to same-origin requests.
 
 ### Export/import
 
