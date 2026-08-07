@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MobileDialogContent from '@/components/MobileDialogContent.vue'
 import { Button } from '@/components/ui/button'
@@ -18,19 +18,31 @@ const toast = useToastStore()
 
 const title = ref('')
 const body = ref('')
-const canSave = computed(() => title.value.trim().length > 0)
+// In-flight guard: a double-tap on Save would otherwise run save() twice and
+// create two identical notes before the first write resolves.
+const isSaving = ref(false)
+const canSave = computed(() => title.value.trim().length > 0 && !isSaving.value)
 
-// Fresh form every time the sheet opens.
-watch(open, (isOpen) => {
-  if (isOpen) {
-    title.value = ''
-    body.value = ''
-  }
-})
-
+// The draft deliberately survives a dismissal — an accidental tap on the
+// overlay must not destroy what the user typed. It is cleared only after a
+// write actually lands.
 async function save(): Promise<void> {
   if (!canSave.value) return
-  await notesStore.add({ title: title.value.trim(), body: body.value.trim() })
+  isSaving.value = true
+  try {
+    await notesStore.add({ title: title.value.trim(), body: body.value.trim() })
+  } catch (error) {
+    // Storage can genuinely fail (quota exceeded, private browsing). Keep the
+    // sheet and the draft open, and never fail silently.
+    console.error('[notes] saving the note failed', error)
+    toast.showToast(t('notes.toast.saveFailed'))
+    return
+  } finally {
+    isSaving.value = false
+  }
+
+  title.value = ''
+  body.value = ''
   // The sheet closes itself, so confirm the save through a toast.
   toast.showToast(t('notes.toast.created'))
   open.value = false

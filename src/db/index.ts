@@ -7,5 +7,11 @@
 export { exportData, importData } from './backup'
 export type { Note } from './converters'
 export type { NoteDraft } from './repositories/notes'
-export { createNote, deleteNote, listNotes, updateNote } from './repositories/notes'
+export {
+  createNote,
+  deleteNote,
+  listNotes,
+  toggleNotePinned,
+  updateNote,
+} from './repositories/notes'
 export { resetDatabase } from './schema'

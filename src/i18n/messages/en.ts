@@ -40,6 +40,10 @@ export default {
     toast: {
       created: 'Note saved',
       deleted: 'Note deleted',
+      loadFailed: 'Your notes could not be loaded',
+      saveFailed: 'That note could not be saved',
+      deleteFailed: 'That note could not be deleted',
+      pinFailed: 'That note could not be updated',
     },
   },
   settings: {
@@ -51,6 +55,9 @@ export default {
     language: {
       title: 'Language',
       label: 'App language',
+      // This language in its own name — the picker reads it from every
+      // catalog, so a translation of it would be wrong here.
+      nativeName: 'English',
     },
     data: {
       title: 'Your data',
@@ -59,6 +66,7 @@ export default {
       import: 'Import data',
       importSuccess: 'Data imported',
       importError: 'That file could not be imported',
+      exportError: 'Your data could not be exported',
     },
   },
   pwa: {

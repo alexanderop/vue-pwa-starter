@@ -42,6 +42,10 @@ const de: MessageSchema = {
     toast: {
       created: 'Notiz gespeichert',
       deleted: 'Notiz gelöscht',
+      loadFailed: 'Deine Notizen konnten nicht geladen werden',
+      saveFailed: 'Diese Notiz konnte nicht gespeichert werden',
+      deleteFailed: 'Diese Notiz konnte nicht gelöscht werden',
+      pinFailed: 'Diese Notiz konnte nicht aktualisiert werden',
     },
   },
   settings: {
@@ -53,6 +57,9 @@ const de: MessageSchema = {
     language: {
       title: 'Sprache',
       label: 'App-Sprache',
+      // Diese Sprache in ihrem eigenen Namen — bleibt in jedem Katalog
+      // unübersetzt.
+      nativeName: 'Deutsch',
     },
     data: {
       title: 'Deine Daten',
@@ -62,6 +69,7 @@ const de: MessageSchema = {
       import: 'Daten importieren',
       importSuccess: 'Daten importiert',
       importError: 'Diese Datei konnte nicht importiert werden',
+      exportError: 'Deine Daten konnten nicht exportiert werden',
     },
   },
   pwa: {

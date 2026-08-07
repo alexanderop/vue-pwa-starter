@@ -9,12 +9,35 @@ const { t } = useI18n()
 const notesStore = useNotesStore()
 const toast = useToastStore()
 
-onMounted(() => {
-  void notesStore.load()
-})
+// Returning the promise matters: Vue routes a rejected async lifecycle hook
+// through app.config.errorHandler. Without it a Dexie failure (Firefox private
+// browsing, for instance) becomes a raw unhandledrejection and the list just
+// stays empty.
+onMounted(() =>
+  notesStore.load().catch((error: unknown) => {
+    toast.showToast(t('notes.toast.loadFailed'))
+    throw error
+  }),
+)
+
+// The store rethrows storage failures; presenting them is this layer's job.
+async function handleTogglePinned(id: string): Promise<void> {
+  try {
+    await notesStore.togglePinned(id)
+  } catch (error) {
+    console.error('[notes] toggling the pin failed', error)
+    toast.showToast(t('notes.toast.pinFailed'))
+  }
+}
 
 async function handleDelete(id: string): Promise<void> {
-  await notesStore.remove(id)
+  try {
+    await notesStore.remove(id)
+  } catch (error) {
+    console.error('[notes] deleting the note failed', error)
+    toast.showToast(t('notes.toast.deleteFailed'))
+    return
+  }
   toast.showToast(t('notes.toast.deleted'))
 }
 </script>
@@ -35,7 +58,7 @@ async function handleDelete(id: string): Promise<void> {
       <li v-for="note in notesStore.notes" :key="note.id">
         <NoteCard
           :note="note"
-          @toggle-pinned="notesStore.togglePinned(note)"
+          @toggle-pinned="handleTogglePinned(note.id)"
           @delete="handleDelete(note.id)"
         />
       </li>

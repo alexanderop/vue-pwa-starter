@@ -34,6 +34,20 @@ export async function updateNote(
   await db.notes.update(id, { ...patch, updatedAt: Date.now() })
 }
 
+/**
+ * Flips `pinned` based on what is currently on disk, inside a read-write
+ * transaction. Deliberately not `updateNote(id, { pinned: !note.pinned })`:
+ * that computes the next value from a row the caller read earlier, so two
+ * rapid taps both write the same value and one of them is lost.
+ */
+export async function toggleNotePinned(id: string): Promise<void> {
+  await db.transaction('rw', db.notes, async () => {
+    const stored = await db.notes.get(id)
+    if (!stored) return
+    await db.notes.update(id, { pinned: !(stored.pinned ?? false), updatedAt: Date.now() })
+  })
+}
+
 export async function deleteNote(id: string): Promise<void> {
   await db.notes.delete(id)
 }
