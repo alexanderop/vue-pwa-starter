@@ -1,7 +1,8 @@
 import { describe, expect, it } from '@effect/vitest'
-import { Clock, Effect } from 'effect'
-import { TestClock } from 'effect/testing'
+import { Clock, Effect, Schema } from 'effect'
+import { FastCheck, TestClock } from 'effect/testing'
 import type { Note } from '@/db'
+import { StoredDbNote, toNote } from '@/db/converters'
 import { noteAge, sortNotes } from '@/features/notes/domain'
 
 function makeNote(overrides: Partial<Note> & Pick<Note, 'id'>): Note {
@@ -40,6 +41,36 @@ describe('sortNotes', () => {
 
     expect(notes).toEqual(snapshot)
   })
+
+  /**
+   * The example above pins one hand-picked ordering; this property pins the
+   * *definition* of the order for every input. Notes are generated from the
+   * same schema the store decodes with (`StoredDbNote` → `toNote`), so the
+   * generator can never drift from what a note actually is.
+   */
+  it.prop(
+    'orders any notes pinned-first, newest-updated within each group, losing nothing',
+    { rows: Schema.toArbitrary(Schema.Array(StoredDbNote)) },
+    ({ rows }) => {
+      const notes = rows.map(toNote)
+      const sorted = sortNotes(notes)
+
+      // A reordering only: same notes in, same notes out.
+      const canonical = (list: ReadonlyArray<Note>) => list.map((n) => JSON.stringify(n)).sort()
+      expect(canonical(sorted)).toEqual(canonical(notes))
+
+      sorted.slice(1).forEach((next, i) => {
+        const prev = sorted[i] as Note
+
+        // An unpinned note never precedes a pinned one…
+        expect(prev.pinned || !next.pinned).toBe(true)
+        // …and within a group, updatedAt never increases.
+        if (prev.pinned === next.pinned) {
+          expect(prev.updatedAt).toBeGreaterThanOrEqual(next.updatedAt)
+        }
+      })
+    },
+  )
 })
 
 /**
@@ -96,5 +127,21 @@ describe('noteAge', () => {
 
       expect(yield* noteAge(now + 5 * 60_000)).toEqual({ unit: 'justNow' })
     }),
+  )
+
+  // The examples pin each bucket boundary; the property pins what the UI
+  // relies on for *every* timestamp, past or future: a bucketed age never
+  // carries a zero or negative count — "0 minutes ago" is not a thing.
+  it.effect.prop(
+    'never reports a zero or negative count, whatever the timestamp',
+    { updatedAt: FastCheck.integer() },
+    ({ updatedAt }) =>
+      Effect.gen(function* () {
+        const age = yield* noteAge(updatedAt)
+
+        if (age.unit !== 'justNow') {
+          expect(age.count).toBeGreaterThanOrEqual(1)
+        }
+      }),
   )
 })

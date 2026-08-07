@@ -1,6 +1,13 @@
 import { describe, expect, it } from '@effect/vitest'
-import { Effect } from 'effect'
-import { decodeNoteDraft, decodeStoredNote, isNoteDraft, toNote } from '@/db/converters'
+import { Effect, Result, Schema } from 'effect'
+import { FastCheck } from 'effect/testing'
+import {
+  decodeNoteDraft,
+  decodeStoredNote,
+  isNoteDraft,
+  StoredDbNote,
+  toNote,
+} from '@/db/converters'
 
 describe('toNote', () => {
   it('normalizes a v1-era row (no pinned, no updatedAt)', () => {
@@ -129,5 +136,64 @@ describe('decodeNoteDraft', () => {
     Effect.gen(function* () {
       yield* Effect.flip(decodeNoteDraft({ title: '\t  ', body: 'orphan' }))
     }),
+  )
+})
+
+/**
+ * Property-based tests. `Schema.toArbitrary` turns the same `StoredDbNote`
+ * that validates rows into a fast-check generator for them — a hundred random
+ * rows per run, v1 shapes (missing pinned/updatedAt) and v2 shapes alike,
+ * with no hand-written fixtures to drift out of date. The examples above pin
+ * the exact behavior at each known boundary; the properties here say what
+ * must hold for *every* row.
+ */
+const storedRow = Schema.toArbitrary(StoredDbNote)
+
+describe('toNote properties', () => {
+  it.prop(
+    'normalizes any decodable row to a complete note',
+    { stored: storedRow },
+    ({ stored }) => {
+      const note = toNote(stored)
+
+      expect(note.pinned).toBe(stored.pinned ?? false)
+      expect(note.updatedAt).toBe(stored.updatedAt ?? stored.createdAt)
+      expect(note.createdAt).toBe(stored.createdAt)
+    },
+  )
+
+  it.effect.prop(
+    'produces rows the store schema accepts back — normalization is idempotent',
+    { stored: storedRow },
+    ({ stored }) =>
+      Effect.gen(function* () {
+        // Whatever toNote emits eventually lands back in IndexedDB and in the
+        // user's next backup, so it must itself decode — and normalizing an
+        // already-normal row must change nothing.
+        const note = toNote(stored)
+        const reread = yield* decodeStoredNote(note)
+
+        expect(toNote(reread)).toEqual(note)
+      }),
+  )
+})
+
+describe('draft validation properties', () => {
+  it.effect.prop(
+    'accepts exactly the drafts whose trimmed title is non-empty, and isNoteDraft agrees',
+    { title: FastCheck.string(), body: FastCheck.string() },
+    ({ title, body }) =>
+      Effect.gen(function* () {
+        const decoded = yield* Effect.result(decodeNoteDraft({ title, body }))
+
+        // The domain rule, stated independently of the schema that enforces it.
+        expect(Result.isSuccess(decoded)).toBe(title.trim().length > 0)
+        // The form guard may never disagree with the write path.
+        expect(isNoteDraft({ title, body })).toBe(Result.isSuccess(decoded))
+
+        if (Result.isSuccess(decoded)) {
+          expect(decoded.success).toEqual({ title: title.trim(), body: body.trim() })
+        }
+      }),
   )
 })
