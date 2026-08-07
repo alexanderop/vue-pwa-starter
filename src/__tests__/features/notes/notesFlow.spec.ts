@@ -1,6 +1,7 @@
+import { Effect } from 'effect'
 import { page, userEvent } from 'vitest/browser'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { listNotes } from '@/db'
+import { listNotes, runDb } from '@/db'
 import { renderApp } from '../../helpers/renderApp'
 import { resetAppState } from '../../helpers/reset'
 
@@ -24,7 +25,7 @@ describe('notes quick-add flow', () => {
     await expect.element(page.getByRole('heading', { name: 'Buy milk' })).toBeVisible()
     await expect.element(page.getByText('Note saved')).toBeVisible()
 
-    const notes = await listNotes()
+    const notes = await runDb(listNotes.pipe(Effect.orDie))
     expect(notes).toMatchObject([{ title: 'Buy milk', body: '2 liters, oat' }])
   })
 
@@ -39,7 +40,7 @@ describe('notes quick-add flow', () => {
     await page.getByRole('button', { name: 'Delete note Temporary' }).click()
 
     await expect.element(page.getByText('No notes yet')).toBeVisible()
-    expect(await listNotes()).toHaveLength(0)
+    expect(await runDb(listNotes.pipe(Effect.orDie))).toHaveLength(0)
   })
 
   it('keeps the draft when the sheet is dismissed by accident', async () => {
@@ -85,7 +86,7 @@ describe('notes quick-add flow', () => {
     form.requestSubmit()
     form.requestSubmit()
 
-    await expect.poll(async () => (await listNotes()).length).toBe(1)
+    await expect.poll(async () => (await runDb(listNotes.pipe(Effect.orDie))).length).toBe(1)
     await expect.element(page.getByRole('heading', { name: 'Only once' })).toBeVisible()
   })
 

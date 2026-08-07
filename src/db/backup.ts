@@ -1,48 +1,68 @@
-import { z } from 'zod'
-import { toNote } from './converters'
-import { db } from './schema'
+import { DateTime, Effect, Schema } from 'effect'
+import { StoredDbNote, toNote } from './converters'
+import { BackupInvalidError, type DatabaseError } from './errors'
+import { NotesRepo } from './repositories/notes'
 
-const BACKUP_VERSION = 2
+const BACKUP_VERSION = 2 as const
 
-// Accepts both current (v2) and legacy (v1) note shapes — the converter
-// normalizes on import. Data exported by any historical version of the app
-// must stay importable ("The Long Now").
-const storedNoteSchema = z.object({
-  id: z.string().min(1),
-  title: z.string(),
-  body: z.string(),
-  pinned: z.boolean().optional(),
-  createdAt: z.number(),
-  updatedAt: z.number().optional(),
+// `StoredDbNote` is the same schema the repository decodes rows with, so a
+// backup accepts exactly the shapes this app has ever written — current (v2)
+// and legacy (v1), normalized by the converter on import. Sharing it is what
+// keeps "The Long Now" honest: a field added to a note cannot reach disk
+// while quietly dropping out of every export.
+const BackupSchema = Schema.Struct({
+  app: Schema.Literal('vue-pwa-starter'),
+  version: Schema.Literals([1, BACKUP_VERSION]),
+  exportedAt: Schema.String,
+  notes: Schema.Array(StoredDbNote),
 })
 
-const backupSchema = z.object({
-  app: z.literal('vue-pwa-starter'),
-  version: z.number().int().min(1).max(BACKUP_VERSION),
-  exportedAt: z.string(),
-  notes: z.array(storedNoteSchema),
-})
+export type BackupPayload = (typeof BackupSchema)['Type']
 
-export type BackupPayload = z.infer<typeof backupSchema>
-
-export async function exportData(): Promise<BackupPayload> {
-  const notes = await db.notes.toArray()
-  return {
-    app: 'vue-pwa-starter',
-    version: BACKUP_VERSION,
-    exportedAt: new Date().toISOString(),
-    notes: notes.map(toNote),
-  }
-}
+const decodePayload = Schema.decodeUnknownEffect(BackupSchema)
 
 /**
- * Validates and imports a backup payload. Throws (ZodError) on anything that
- * is not a backup file; existing rows with matching ids are overwritten.
- * Returns the number of imported notes.
+ * Pure validation: unknown JSON in, typed payload or BackupInvalidError out.
+ * No IndexedDB involved, which is what makes the import rules testable in
+ * the Node unit tier.
  */
-export async function importData(payload: unknown): Promise<number> {
-  const parsed = backupSchema.parse(payload)
-  const notes = parsed.notes.map(toNote)
-  await db.notes.bulkPut(notes)
+export const decodeBackup = (payload: unknown): Effect.Effect<BackupPayload, BackupInvalidError> =>
+  decodePayload(payload).pipe(
+    Effect.mapError((error) => new BackupInvalidError({ message: error.message })),
+  )
+
+/**
+ * Reads every note and builds the payload *through* `BackupSchema` rather
+ * than casting an object literal into its shape. The notes were already
+ * validated on the way out of the repository, so this is trusted
+ * construction — `make` is the right form, and it fails loudly if the payload
+ * and the schema ever disagree (bumping `BACKUP_VERSION` past what
+ * `Schema.Literals` accepts, say). A cast would have shipped that mismatch.
+ */
+export const exportData: Effect.Effect<BackupPayload, DatabaseError, NotesRepo> = Effect.gen(
+  function* () {
+    const repo = yield* NotesRepo
+    const notes = yield* repo.list()
+    const now = yield* DateTime.now
+    return BackupSchema.make({
+      app: 'vue-pwa-starter',
+      version: BACKUP_VERSION,
+      exportedAt: DateTime.formatIso(now),
+      notes,
+    })
+  },
+).pipe(Effect.withSpan('Backup.exportData'))
+
+/**
+ * Validates and imports a backup payload; existing rows with matching ids
+ * are overwritten. Fails with BackupInvalidError for anything that is not a
+ * backup file and DatabaseError if the write itself fails — both visible in
+ * the type. Returns the number of imported notes.
+ */
+export const importData = Effect.fn('Backup.importData')(function* (payload: unknown) {
+  const backup = yield* decodeBackup(payload)
+  const repo = yield* NotesRepo
+  const notes = backup.notes.map(toNote)
+  yield* repo.putMany(notes)
   return notes.length
-}
+})

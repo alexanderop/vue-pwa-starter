@@ -44,16 +44,17 @@
     "class-variance-authority": "catalog:ui",
     "clsx": "catalog:ui",
     "dexie": "catalog:frontend",
+    "effect": "catalog:frontend",
     "reka-ui": "catalog:ui",
     "tailwind-merge": "catalog:ui",
     "tailwindcss": "catalog:ui",
     "vue": "catalog:frontend",
     "vue-i18n": "catalog:frontend",
     "vue-router": "catalog:frontend",
-    "web-vitals": "catalog:frontend",
-    "zod": "catalog:frontend"
+    "web-vitals": "catalog:frontend"
   },
   "devDependencies": {
+    "@effect/vitest": "catalog:testing",
     "@playwright/test": "catalog:testing",
     "@size-limit/file": "catalog:lint",
     "@tsconfig/node22": "catalog:build",

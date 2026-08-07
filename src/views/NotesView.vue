@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { Effect } from 'effect'
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { runDb } from '@/db'
+import { useReportFailure } from '@/composables/useReportFailure'
 import NoteCard from '@/features/notes/components/NoteCard.vue'
 import { useNotesStore } from '@/features/notes/useNotesStore'
 import { useToastStore } from '@/stores/toast'
@@ -9,36 +12,56 @@ const { t } = useI18n()
 const notesStore = useNotesStore()
 const toast = useToastStore()
 
-// Returning the promise matters: Vue routes a rejected async lifecycle hook
-// through app.config.errorHandler. Without it a Dexie failure (Firefox private
-// browsing, for instance) becomes a raw unhandledrejection and the list just
-// stays empty.
+// The shared failure branch: a structured log for the developer, a toast for
+// the user — see useReportFailure for why it is an Effect.
+const reportFailure = useReportFailure('notes')
+
+// Storage genuinely fails in the wild (quota exceeded, Firefox private
+// browsing). Each handler recovers from that inside Effect, which is what
+// leaves `never` in the error channel — the only thing runDb accepts. An
+// unhandled DatabaseError here is a type error, not a silent empty list.
+//
+// Every handler returns the runDb promise to Vue: with the failures already
+// caught by tag, a rejection can only be a defect, and Vue routes it to
+// `app.config.errorHandler` — but only for promises it is handed.
 onMounted(() =>
-  notesStore.load().catch((error: unknown) => {
-    toast.showToast(t('notes.toast.loadFailed'))
-    throw error
-  }),
+  runDb(
+    notesStore
+      .load()
+      .pipe(
+        Effect.catchTag(
+          'Db.DatabaseError',
+          reportFailure('load notes', t('notes.toast.loadFailed')),
+        ),
+      ),
+  ),
 )
 
-// The store rethrows storage failures; presenting them is this layer's job.
-async function handleTogglePinned(id: string): Promise<void> {
-  try {
-    await notesStore.togglePinned(id)
-  } catch (error) {
-    console.error('[notes] toggling the pin failed', error)
-    toast.showToast(t('notes.toast.pinFailed'))
-  }
+function handleTogglePinned(id: string): Promise<void> {
+  return runDb(
+    notesStore
+      .togglePinned(id)
+      .pipe(
+        Effect.catchTag(
+          'Db.DatabaseError',
+          reportFailure('toggle pinned', t('notes.toast.pinFailed')),
+        ),
+      ),
+  )
 }
 
-async function handleDelete(id: string): Promise<void> {
-  try {
-    await notesStore.remove(id)
-  } catch (error) {
-    console.error('[notes] deleting the note failed', error)
-    toast.showToast(t('notes.toast.deleteFailed'))
-    return
-  }
-  toast.showToast(t('notes.toast.deleted'))
+function handleDelete(id: string): Promise<void> {
+  return runDb(
+    notesStore.remove(id).pipe(
+      // Only a delete that landed is confirmed — the tap runs on the success
+      // branch alone, so the catch below cannot double up on it.
+      Effect.tap(() => Effect.sync(() => toast.showToast(t('notes.toast.deleted')))),
+      Effect.catchTag(
+        'Db.DatabaseError',
+        reportFailure('delete note', t('notes.toast.deleteFailed')),
+      ),
+    ),
+  )
 }
 </script>
 

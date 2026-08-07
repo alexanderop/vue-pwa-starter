@@ -1,4 +1,5 @@
 import { createGlobalState } from '@vueuse/core'
+import { Effect } from 'effect'
 import { reactive, ref } from 'vue'
 import type { Note, NoteDraft } from '@/db'
 import { createNote, deleteNote, listNotes, toggleNotePinned } from '@/db'
@@ -11,35 +12,44 @@ import { sortNotes } from './domain'
  * writer; every mutation goes through the repository and then re-reads, so
  * the ref always mirrors what is actually persisted.
  *
- * Write failures (quota exceeded, private-browsing IndexedDB) propagate to
- * the caller untouched — the store stays honest about what is persisted and
- * the UI layer decides how to present the failure.
+ * Every method returns an Effect *program* rather than running one. Nothing
+ * touches IndexedDB until a component pipes the program through its own
+ * failure handling and hands it to `runDb`. That keeps write failures (quota
+ * exceeded, private-browsing IndexedDB) in the type as `DatabaseError`
+ * instead of as a thrown exception the caller may or may not remember to
+ * catch — the UI layer still decides how to present them, but the compiler
+ * decides that it must.
+ *
+ * The methods stay functions rather than plain Effect values on purpose:
+ * `reactive()` deep-proxies nested objects, and an Effect handed to it would
+ * be wrapped along with its internals. Functions it leaves alone.
  */
 export const useNotesStore = createGlobalState(() => {
   const notes = ref<Array<Note>>([])
   const isLoaded = ref(false)
 
-  async function load(): Promise<void> {
-    notes.value = sortNotes(await listNotes())
+  const load = Effect.fn('notesStore.load')(function* () {
+    const stored = yield* listNotes
+    notes.value = sortNotes(stored)
     isLoaded.value = true
-  }
+  })
 
-  async function add(draft: NoteDraft): Promise<void> {
-    await createNote(draft)
-    await load()
-  }
+  const add = Effect.fn('notesStore.add')(function* (draft: NoteDraft) {
+    yield* createNote(draft)
+    yield* load()
+  })
 
   // Takes an id, not a row: the flip happens against current DB state so a
   // double-tap can't write the same value twice from a stale row.
-  async function togglePinned(id: string): Promise<void> {
-    await toggleNotePinned(id)
-    await load()
-  }
+  const togglePinned = Effect.fn('notesStore.togglePinned')(function* (id: string) {
+    yield* toggleNotePinned(id)
+    yield* load()
+  })
 
-  async function remove(id: string): Promise<void> {
-    await deleteNote(id)
-    await load()
-  }
+  const remove = Effect.fn('notesStore.remove')(function* (id: string) {
+    yield* deleteNote(id)
+    yield* load()
+  })
 
   function $reset(): void {
     notes.value = []

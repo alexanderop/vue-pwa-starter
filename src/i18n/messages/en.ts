@@ -32,6 +32,14 @@ export default {
       bodyLabel: 'Note',
       bodyPlaceholder: 'Write it down…',
     },
+    // How long ago a note was edited. {n} is vue-i18n's plural count; the
+    // `one | many` forms keep "1 day ago" grammatical in every locale.
+    age: {
+      justNow: 'Just now',
+      minutes: '{n} min ago',
+      hours: '{n} hr ago',
+      days: '{n} day ago | {n} days ago',
+    },
     actions: {
       pin: 'Pin note {title}',
       unpin: 'Unpin note {title}',
@@ -42,6 +50,7 @@ export default {
       deleted: 'Note deleted',
       loadFailed: 'Your notes could not be loaded',
       saveFailed: 'That note could not be saved',
+      titleRequired: 'A note needs a title',
       deleteFailed: 'That note could not be deleted',
       pinFailed: 'That note could not be updated',
     },
@@ -66,6 +75,7 @@ export default {
       import: 'Import data',
       importSuccess: 'Data imported',
       importError: 'That file could not be imported',
+      invalidBackup: 'That file is not a backup from this app',
       exportError: 'Your data could not be exported',
     },
   },

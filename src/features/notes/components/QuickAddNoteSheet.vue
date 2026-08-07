@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Effect } from 'effect'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MobileDialogContent from '@/components/MobileDialogContent.vue'
@@ -7,6 +8,8 @@ import { DialogDescription, DialogRoot, DialogTitle } from '@/components/ui/dial
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useReportFailure } from '@/composables/useReportFailure'
+import { isNoteDraft, runDb } from '@/db'
 import { useToastStore } from '@/stores/toast'
 import { useNotesStore } from '../useNotesStore'
 
@@ -21,31 +24,67 @@ const body = ref('')
 // In-flight guard: a double-tap on Save would otherwise run save() twice and
 // create two identical notes before the first write resolves.
 const isSaving = ref(false)
-const canSave = computed(() => title.value.trim().length > 0 && !isSaving.value)
+
+/**
+ * What the form will submit — one value, so the guard and the write agree.
+ * Deliberately not trimmed here: the draft schema trims, so a title typed
+ * with a trailing space is normalized by the repository rather than by every
+ * caller remembering to.
+ */
+const draft = computed(() => ({ title: title.value, body: body.value }))
+
+// The button is disabled on exactly the rule the repository enforces, run
+// through the same schema rather than restated as `trim().length > 0`. The
+// repository still validates: this only saves the user a round-trip.
+const canSave = computed(() => isNoteDraft(draft.value) && !isSaving.value)
+
+// The shared failure branch: a structured log for the developer, a toast for
+// the user — see useReportFailure for why it is an Effect.
+const reportFailure = useReportFailure('notes')
 
 // The draft deliberately survives a dismissal — an accidental tap on the
 // overlay must not destroy what the user typed. It is cleared only after a
-// write actually lands.
+// write actually lands, which is why clearing sits on the success branch of
+// the program rather than after it.
+//
+// The guard is still set synchronously, before the first await, so two
+// submits in the same tick cannot both reach the store. The runDb promise is
+// awaited (and so returned to Vue): with both failures caught by tag, a
+// rejection can only be a defect, which Vue routes to
+// `app.config.errorHandler` — but only for promises it is handed.
 async function save(): Promise<void> {
   if (!canSave.value) return
   isSaving.value = true
-  try {
-    await notesStore.add({ title: title.value.trim(), body: body.value.trim() })
-  } catch (error) {
-    // Storage can genuinely fail (quota exceeded, private browsing). Keep the
-    // sheet and the draft open, and never fail silently.
-    console.error('[notes] saving the note failed', error)
-    toast.showToast(t('notes.toast.saveFailed'))
-    return
-  } finally {
-    isSaving.value = false
-  }
 
-  title.value = ''
-  body.value = ''
-  // The sheet closes itself, so confirm the save through a toast.
-  toast.showToast(t('notes.toast.created'))
-  open.value = false
+  await runDb(
+    notesStore.add(draft.value).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          title.value = ''
+          body.value = ''
+          // The sheet closes itself, so confirm the save through a toast.
+          toast.showToast(t('notes.toast.created'))
+          open.value = false
+        }),
+      ),
+      // Two ways to fail, two messages. Storage genuinely fails in the wild
+      // (quota exceeded, private browsing); a rejected draft should not get
+      // here at all, since `canSave` runs the same rule, but the repository
+      // owns that rule and the compiler makes this side answer for it. Either
+      // way the sheet and the draft stay open, and nothing fails silently.
+      Effect.catchTags({
+        'Db.DatabaseError': reportFailure('save note', t('notes.toast.saveFailed')),
+        'Db.NoteInvalidError': reportFailure('save note', t('notes.toast.titleRequired')),
+      }),
+      // Outermost, so the guard is released on both branches — and on an
+      // interrupt, which a plain success/failure handler would miss.
+      Effect.ensuring(
+        Effect.sync(() => {
+          isSaving.value = false
+        }),
+      ),
+    ),
+  )
 }
 </script>
 

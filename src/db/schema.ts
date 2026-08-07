@@ -1,27 +1,19 @@
 import Dexie, { type Table } from 'dexie'
-
-/** Current on-disk shape of a note (schema v2). */
-export type DbNote = {
-  id: string
-  title: string
-  body: string
-  pinned: boolean
-  /** Epoch milliseconds. */
-  createdAt: number
-  /** Epoch milliseconds. */
-  updatedAt: number
-}
+import type { Types } from 'effect'
+import type { StoredDbNote } from './converters'
 
 /**
- * What may actually come back from disk: rows written by schema v1 lack
- * `pinned` and `updatedAt`. The Dexie upgrade below backfills live rows,
- * but old JSON backups can re-introduce v1 rows at import time — so all
- * reads still go through the converter (converters.ts), which normalizes
- * either shape. Keeping the stored type honest about optionality is what
- * makes the compiler enforce that.
+ * Dexie tables and migrations. The *shape* of a note lives in converters.ts,
+ * as a Schema that this file's table typing derives from — a type here and a
+ * schema there would be two descriptions of the same row, free to drift.
+ *
+ * The table is typed `StoredDbNote`, not `DbNote`: rows written by schema v1
+ * lack `pinned` and `updatedAt`. The upgrade below backfills live rows, but
+ * old JSON backups can re-introduce v1 rows at import time, so every read
+ * still goes through the decode-and-normalize path in converters.ts. Keeping
+ * the stored type honest about optionality is what makes the compiler enforce
+ * that.
  */
-export type StoredDbNote = Omit<DbNote, 'pinned' | 'updatedAt'> &
-  Partial<Pick<DbNote, 'pinned' | 'updatedAt'>>
 
 class StarterDatabase extends Dexie {
   notes!: Table<StoredDbNote, string>
@@ -44,8 +36,10 @@ class StarterDatabase extends Dexie {
         notes: 'id, createdAt, updatedAt',
       })
       .upgrade(async (tx) => {
+        // Dexie's `modify` edits rows in place, and a schema-derived type is
+        // readonly — this is the one place that writes through it.
         await tx
-          .table<StoredDbNote>('notes')
+          .table<Types.Mutable<StoredDbNote>>('notes')
           .toCollection()
           .modify((note) => {
             note.pinned ??= false

@@ -5,13 +5,27 @@
  * What a backup *contains* and whether it is valid is `@/db`'s business
  * (src/db/backup.ts owns serialization and schema validation) — this module
  * only moves it across the browser boundary.
+ *
+ * Both directions are Effect programs with a tagged failure, so a component
+ * can compose them with the `@/db` programs into one pipeline and match on
+ * every way it can fail in a single `Effect.catchTags`.
  */
+import { Effect, Schema } from 'effect'
 import { downloadBlob } from './download'
 
 /** Stem of every exported backup file; the export date is appended. */
 const BACKUP_FILENAME_STEM = 'vue-pwa-starter-backup'
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Moving a backup across the browser's file boundary failed. */
+export class BackupFileError extends Schema.TaggedErrorClass<BackupFileError>()(
+  'BackupFile.BackupFileError',
+  {
+    operation: Schema.String,
+    cause: Schema.Defect(),
+  },
+) {}
 
 /**
  * Date-stamped name for a backup file, derived from the payload's own
@@ -30,18 +44,27 @@ export function backupFilename(exportedAt: string): string {
 }
 
 /** Serialize a backup payload and hand it to the browser as a download. */
-export function downloadBackup(payload: { exportedAt: string }): void {
-  const json = JSON.stringify(payload, null, 2)
+export const downloadBackup = (payload: {
+  exportedAt: string
+}): Effect.Effect<void, BackupFileError> =>
+  Effect.try({
+    try: () => {
+      const json = JSON.stringify(payload, null, 2)
 
-  downloadBlob(new Blob([json], { type: 'application/json' }), backupFilename(payload.exportedAt))
-}
+      downloadBlob(
+        new Blob([json], { type: 'application/json' }),
+        backupFilename(payload.exportedAt),
+      )
+    },
+    catch: (cause) => new BackupFileError({ operation: 'download backup', cause }),
+  })
 
 /**
- * Read a user-picked file into a payload. Throws on anything that is not
- * JSON; whether the JSON is actually a backup is `importData`'s call.
+ * Read a user-picked file into a payload. Fails for anything that is not
+ * readable JSON; whether the JSON is actually a backup is `importData`'s call.
  */
-export async function readBackupFile(file: File): Promise<unknown> {
-  const payload: unknown = JSON.parse(await file.text())
-
-  return payload
-}
+export const readBackupFile = (file: File): Effect.Effect<unknown, BackupFileError> =>
+  Effect.tryPromise({
+    try: async (): Promise<unknown> => JSON.parse(await file.text()),
+    catch: (cause) => new BackupFileError({ operation: 'read backup file', cause }),
+  })

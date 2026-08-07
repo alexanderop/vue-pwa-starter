@@ -7,6 +7,6 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
 declare module 'vue-i18n' {
   // Typed message keys: `t('nav.notes')` compiles, `t('nav.typo')` does not.
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module augmentation must be an interface
+
   export interface DefineLocaleMessage extends MessageSchema {}
 }

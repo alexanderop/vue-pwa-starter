@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { toNote } from '@/db/converters'
+import { describe, expect, it } from '@effect/vitest'
+import { Effect } from 'effect'
+import { decodeNoteDraft, decodeStoredNote, isNoteDraft, toNote } from '@/db/converters'
 
 describe('toNote', () => {
   it('normalizes a v1-era row (no pinned, no updatedAt)', () => {
@@ -27,4 +28,106 @@ describe('toNote', () => {
 
     expect(toNote(stored)).toEqual(stored)
   })
+})
+
+/**
+ * The schema is what stands between an untrusted store and the domain. It has
+ * to accept every shape this app has ever written — that is what keeps old
+ * data readable — while rejecting anything that is damaged rather than merely
+ * old, because a row the repository cannot trust must not be rendered as a
+ * note and then written back into the user's next backup.
+ */
+describe('decodeStoredNote', () => {
+  it.effect('accepts a complete v2 row', () =>
+    Effect.gen(function* () {
+      const row = yield* decodeStoredNote({
+        id: 'a',
+        title: 'Hello',
+        body: 'world',
+        pinned: true,
+        createdAt: 1,
+        updatedAt: 2,
+      })
+
+      expect(row.id).toBe('a')
+    }),
+  )
+
+  it.effect('accepts a v1 row missing pinned and updatedAt', () =>
+    Effect.gen(function* () {
+      const row = yield* decodeStoredNote({ id: 'a', title: 'Old', body: '', createdAt: 1 })
+
+      expect(row.pinned).toBeUndefined()
+      expect(toNote(row).updatedAt).toBe(1)
+    }),
+  )
+
+  it.effect('rejects a row whose title is not a string', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(
+        decodeStoredNote({ id: 'a', title: 42, body: '', createdAt: 1 }),
+      )
+
+      expect(error.message).not.toHaveLength(0)
+    }),
+  )
+
+  it.effect('rejects a row with an empty id', () =>
+    Effect.gen(function* () {
+      yield* Effect.flip(decodeStoredNote({ id: '', title: 'x', body: '', createdAt: 1 }))
+    }),
+  )
+
+  it.effect('rejects a row that is missing a required field', () =>
+    Effect.gen(function* () {
+      yield* Effect.flip(decodeStoredNote({ id: 'a', title: 'x', createdAt: 1 }))
+    }),
+  )
+
+  it.effect('rejects a value that is not an object at all', () =>
+    Effect.gen(function* () {
+      yield* Effect.flip(decodeStoredNote(null))
+    }),
+  )
+})
+
+/**
+ * The same rule the repository enforces, exposed as a predicate so a form can
+ * disable Save without restating it. If these two ever disagree, the form and
+ * the repository disagree about what a note is.
+ */
+describe('isNoteDraft', () => {
+  it('accepts a draft with a title', () => {
+    expect(isNoteDraft({ title: 'Something', body: '' })).toBe(true)
+  })
+
+  it('accepts a title that still has whitespace around it', () => {
+    // The schema trims, so the form must not have to. A user mid-word with a
+    // trailing space would otherwise see Save flicker off.
+    expect(isNoteDraft({ title: '  Groceries ', body: '' })).toBe(true)
+  })
+
+  it('rejects an empty title', () => {
+    expect(isNoteDraft({ title: '', body: 'body without a title' })).toBe(false)
+  })
+
+  it('rejects a title of nothing but whitespace', () => {
+    expect(isNoteDraft({ title: '   ', body: '' })).toBe(false)
+  })
+})
+
+describe('decodeNoteDraft', () => {
+  it.effect('trims both fields', () =>
+    Effect.gen(function* () {
+      const draft = yield* decodeNoteDraft({ title: '  Groceries  ', body: '  milk\n' })
+
+      expect(draft).toEqual({ title: 'Groceries', body: 'milk' })
+    }),
+  )
+
+  it.effect('rejects a whitespace-only title once trimmed', () =>
+    Effect.gen(function* () {
+      yield* Effect.flip(decodeNoteDraft({ title: '\t  ', body: 'orphan' }))
+    }),
+  )
 })

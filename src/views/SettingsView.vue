@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Download, Upload } from '@lucide/vue'
+import { Effect } from 'effect'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageLayout from '@/components/PageLayout.vue'
@@ -7,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useLocale } from '@/composables/useLocale'
+import { useReportFailure } from '@/composables/useReportFailure'
 import { useTheme } from '@/composables/useTheme'
-import { exportData, importData } from '@/db'
+import { exportData, importData, runDb } from '@/db'
 import { useNotesStore } from '@/features/notes/useNotesStore'
 import type { SupportedLocale } from '@/i18n'
 import { downloadBackup, readBackupFile } from '@/lib/backupFile'
@@ -19,6 +21,10 @@ const { isDark } = useTheme()
 const { locale, setLocale, supportedLocales } = useLocale()
 const toast = useToastStore()
 const notesStore = useNotesStore()
+
+// The shared failure branch: a structured log for the developer, a toast for
+// the user — see useReportFailure for why it is an Effect.
+const reportFailure = useReportFailure('settings')
 
 /**
  * Every language is offered in its own name ("Deutsch", never "German"), so
@@ -34,16 +40,25 @@ function handleLocaleChange(event: Event): void {
   setLocale(value as SupportedLocale)
 }
 
-async function handleExport(): Promise<void> {
-  try {
-    downloadBackup(await exportData())
-  } catch (error) {
-    // Reading the database or handing the file to the browser failed. A
-    // backup the user believes they saved and did not is the worst outcome
-    // in a local-first app, so the failure is never silent.
-    console.error('[settings] exporting data failed', error)
-    toast.showToast(t('settings.data.exportError'))
-  }
+/**
+ * Reading the database and handing the file to the browser are two steps that
+ * can each fail, so both are programs and the recovery is written once. A
+ * backup the user believes they saved and did not is the worst outcome in a
+ * local-first app, so the failure is never silent.
+ *
+ * The runDb promise is returned to Vue: with every failure caught by tag, a
+ * rejection can only be a defect, and Vue routes it to
+ * `app.config.errorHandler` — but only for promises it is handed.
+ */
+function handleExport(): Promise<void> {
+  const failed = reportFailure('export backup', t('settings.data.exportError'))
+
+  return runDb(
+    exportData.pipe(
+      Effect.flatMap(downloadBackup),
+      Effect.catchTags({ 'Db.DatabaseError': failed, 'BackupFile.BackupFileError': failed }),
+    ),
+  )
 }
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -54,14 +69,26 @@ async function handleImportFile(event: Event): Promise<void> {
   input.value = ''
   if (!file) return
 
-  try {
-    await importData(await readBackupFile(file))
-    await notesStore.load()
-    toast.showToast(t('settings.data.importSuccess'))
-  } catch {
-    // Invalid JSON or a file that fails schema validation — never silent.
-    toast.showToast(t('settings.data.importError'))
-  }
+  const failed = reportFailure('import backup', t('settings.data.importError'))
+
+  // Read the file, validate it as a backup, write it, then re-read the store —
+  // one program, three distinct ways to fail, matched by tag: a payload that
+  // is not a backup gets its own message, an unreadable file or a failed write
+  // stays generic. A tag left out of `catchTags` stays in the error channel,
+  // so adding a fourth failure to the pipeline breaks the build at `runDb`
+  // until it is handled here.
+  await runDb(
+    readBackupFile(file).pipe(
+      Effect.flatMap(importData),
+      Effect.flatMap(() => notesStore.load()),
+      Effect.tap(() => Effect.sync(() => toast.showToast(t('settings.data.importSuccess')))),
+      Effect.catchTags({
+        'Db.BackupInvalidError': reportFailure('import backup', t('settings.data.invalidBackup')),
+        'BackupFile.BackupFileError': failed,
+        'Db.DatabaseError': failed,
+      }),
+    ),
+  )
 }
 </script>
 

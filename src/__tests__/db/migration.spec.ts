@@ -1,6 +1,7 @@
 import Dexie from 'dexie'
+import { Effect } from 'effect'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { listNotes } from '@/db'
+import { listNotes, runDb } from '@/db'
 import { db } from '@/db/schema'
 
 /**
@@ -24,7 +25,7 @@ describe('schema migration v1 → v2', () => {
     // Opening the app database (v2) runs the upgrade.
     await db.open()
 
-    const notes = await listNotes()
+    const notes = await runDb(listNotes.pipe(Effect.orDie))
     expect(notes).toEqual([
       {
         id: 'legacy-1',

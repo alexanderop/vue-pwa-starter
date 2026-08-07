@@ -34,6 +34,12 @@ const de: MessageSchema = {
       bodyLabel: 'Notiz',
       bodyPlaceholder: 'Schreib es auf…',
     },
+    age: {
+      justNow: 'Gerade eben',
+      minutes: 'vor {n} Min.',
+      hours: 'vor {n} Std.',
+      days: 'vor {n} Tag | vor {n} Tagen',
+    },
     actions: {
       pin: 'Notiz {title} anpinnen',
       unpin: 'Notiz {title} lösen',
@@ -44,6 +50,7 @@ const de: MessageSchema = {
       deleted: 'Notiz gelöscht',
       loadFailed: 'Deine Notizen konnten nicht geladen werden',
       saveFailed: 'Diese Notiz konnte nicht gespeichert werden',
+      titleRequired: 'Eine Notiz braucht einen Titel',
       deleteFailed: 'Diese Notiz konnte nicht gelöscht werden',
       pinFailed: 'Diese Notiz konnte nicht aktualisiert werden',
     },
@@ -69,6 +76,7 @@ const de: MessageSchema = {
       import: 'Daten importieren',
       importSuccess: 'Daten importiert',
       importError: 'Diese Datei konnte nicht importiert werden',
+      invalidBackup: 'Diese Datei ist kein Backup dieser App',
       exportError: 'Deine Daten konnten nicht exportiert werden',
     },
   },

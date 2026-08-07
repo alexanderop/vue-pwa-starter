@@ -141,6 +141,15 @@ export default defineConfigWithVueTs(
       // Optional props in <script setup lang="ts"> are typed as possibly
       // undefined — forcing a default on every one adds noise, not safety.
       'vue/require-default-prop': 'off',
+
+      // `interface Note extends Schema.Schema.Type<typeof Note> {}` is the
+      // Effect idiom for giving a schema's decoded type the schema's own
+      // name — a body would defeat the point. Still flag the genuinely empty
+      // `interface Foo {}`, which means nothing.
+      '@typescript-eslint/no-empty-object-type': [
+        'error',
+        { allowInterfaces: 'with-single-extends' },
+      ],
     },
   },
 

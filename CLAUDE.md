@@ -23,10 +23,23 @@ pnpm knip           # Dead exports
 pnpm build          # Production build (+ pnpm size-limit for the budget)
 ```
 
+## Effect
+
+`effect` is pinned to exactly `4.0.0-beta.101`. For any Effect question (API
+shape, runtime behavior, examples), read the real source at
+`~/Projects/opensource/effect` — checked out on branch `pinned/4.0.0-beta.101`
+to match. Start with its `LLMS.md`, `SCHEMA.md`, and the runnable examples
+under `ai-docs/src/**`. Online docs and v3 training data describe a different
+API; do not use them. Bumping the pin means moving the reference clone's
+pinned branch too.
+
 ## Critical conventions
 
 - **State**: VueUse `createGlobalState()` for shared stores — NOT Pinia. Stores expose `$reset()` for tests.
 - **DB**: all access via `src/db/index.ts` repositories. Schema changes need a version bump + `upgrade()` + converter update — see `src/db/schema.ts` for the worked v1→v2 example and docs/local-first.md for why both.
+- **One schema per row, in `src/db/converters.ts`**: a `Schema.Struct` plus a same-name `interface` is the source of truth; Dexie's table typing, the read-path decode, and backup validation all derive from it. Never hand-write a TypeScript type beside a schema for the same data — they drift silently. IndexedDB is untrusted input: repositories decode every row on read and validate every draft on write, both failing with tagged errors.
+- **DB is Effect-based**: repositories are `Context.Service` classes with `Layer`s (`src/db/repositories/notes.ts` is the worked example); failures are tagged errors (`Schema.TaggedErrorClass`, `src/db/errors.ts`) visible in each program's type; validation uses `effect/Schema` (not zod). **Effect does not stop at the Vue boundary**: stores return programs rather than running them (`src/features/notes/useNotesStore.ts`), components compose those programs and handle every failure inside Effect with `Effect.catchTag`/`Effect.catchTags`, and `runDb` from `@/db` accepts only `Effect<A, never, DbServices>` — so an unhandled `DatabaseError` is a type error, not a runtime surprise. No try/catch and no `instanceof` in `.vue` files; `src/views/SettingsView.vue` is the worked example (three failure types, one exhaustive `catchTags`). Pure Effect programs are tested with `it.effect` from `@effect/vitest` in the unit tier (worked example: `src/__tests__/unit/db/backup.spec.ts`); browser-tier tests say what they mean about failure with `Effect.orDie` (a failure would break the test) or `Effect.flip` (the failure *is* the assertion). Inside a program, log with `Effect.logError` + `Effect.annotateLogs`, not `console.error` in an `Effect.sync` — that keeps the entry on the fiber and the span `Effect.fn` opened.
+- **Where Effect starts and stops**: everything reachable from `@/db` — persistence, backup payloads, and the domain rules over them (`src/lib/backupFile.ts` is on this side, since a component composes it into one `catchTags` with the db programs). Browser-platform plumbing with no domain content stays plain async TypeScript: `src/lib/persistentStorage.ts` and `src/lib/swUpdateCheck.ts` use try/catch on purpose. If a failure needs a name the UI can match on, it belongs in Effect; if the only response is `console.debug`, it does not.
 - **Features never import other features**; shared layers never import features. Enforced twice: ArchUnitTS in `src/__tests__/architecture/` reads the TypeScript module graph, and `no-restricted-imports` in `eslint.config.ts` covers `.vue` files, which ArchUnitTS does not parse.
 - **Two-way binding**: `const open = defineModel<boolean>('open')`.
 - **i18n**: every user-facing string in `src/i18n/messages/en.ts` and `de.ts`; the schema type makes missing keys a compile error.

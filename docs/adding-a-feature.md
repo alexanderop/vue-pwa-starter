@@ -4,11 +4,12 @@ The notes feature (`src/features/notes`) is the worked example — this walkthro
 
 ## 1. Storage (if the feature persists data)
 
-- Add the table to `src/db/schema.ts`. New table on a fresh install → just add it to the **current** version's `stores()`. Changing an existing table → bump the version, write an `upgrade()`, and widen the `Stored*` type (see the v1→v2 example).
+- Define the row in `src/db/converters.ts` as a `Schema.Struct` plus a same-name `interface`, with a `Stored*` variant whose old-shape fields are `Schema.optionalKey`. The schema is the source of truth: Dexie's table typing, the read-path decode, and backup validation all derive from it, so they cannot drift.
+- Add the table to `src/db/schema.ts`, typed from that schema. New table on a fresh install → just add it to the **current** version's `stores()`. Changing an existing table → bump the version, write an `upgrade()`, and relax the changed fields in the `Stored*` schema (see the v1→v2 example).
 - Add a converter in `src/db/converters.ts` — reads must produce complete domain objects from any historical shape.
-- Add a repository in `src/db/repositories/` and re-export it from `src/db/index.ts`. Nothing outside `src/db` may import deeper than the index — ESLint fails on the import and the arch tests fail your PR.
-- Add the table to `src/db/backup.ts` in the same commit.
-- **Tests**: converter → unit tier; repository CRUD + backup round-trip → `src/__tests__/db/`.
+- Add a repository in `src/db/repositories/` and re-export it from `src/db/index.ts`. Nothing outside `src/db` may import deeper than the index — ESLint fails on the import and the arch tests fail your PR. Reads decode every row; writes validate their input. Both fail with tagged errors, not exceptions.
+- Add the table to `src/db/backup.ts` in the same commit, reusing the same `Stored*` schema.
+- **Tests**: schema decode + converter → unit tier; repository CRUD, rejected rows, and the backup round-trip → `src/__tests__/db/`.
 
 ## 2. Domain logic
 
@@ -19,6 +20,7 @@ Pure functions in `src/features/<name>/domain.ts` (sorting, deriving, validating
 A store per feature with VueUse `createGlobalState()` — `src/features/notes/useNotesStore.ts` is the template. Conventions:
 
 - The store is the only writer; every mutation calls the repository, then re-reads, so state always mirrors disk.
+- Store methods **return** Effect programs, they do not run them. Nothing touches IndexedDB until a component handles the failures and hands the program to `runDb`, which only accepts `Effect<A, never, DbServices>`. Keep them functions rather than plain Effect values — `reactive()` deep-proxies nested objects and would wrap an Effect's internals along with it.
 - Expose a `$reset()` for test isolation and add it to `src/__tests__/helpers/reset.ts`.
 - Why not Pinia? Nothing here needs devtools time-travel or plugins; `createGlobalState` is a plain composable — less API, same reactivity, trivially testable.
 

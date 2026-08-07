@@ -1,5 +1,14 @@
+import { Effect } from 'effect'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createNote, exportData, importData, listNotes, resetDatabase } from '@/db'
+import {
+  BackupInvalidError,
+  createNote,
+  exportData,
+  importData,
+  listNotes,
+  resetDatabase,
+  runDb,
+} from '@/db'
 
 describe('backup export/import', () => {
   beforeEach(async () => {
@@ -7,16 +16,18 @@ describe('backup export/import', () => {
   })
 
   it('round-trips notes through export and import', async () => {
-    await createNote({ title: 'Keep me', body: 'important' })
-    const payload = await exportData()
+    await runDb(createNote({ title: 'Keep me', body: 'important' }).pipe(Effect.orDie))
+    const payload = await runDb(exportData.pipe(Effect.orDie))
 
     await resetDatabase()
-    expect(await listNotes()).toHaveLength(0)
+    expect(await runDb(listNotes.pipe(Effect.orDie))).toHaveLength(0)
 
-    const count = await importData(payload)
+    const count = await runDb(importData(payload).pipe(Effect.orDie))
 
     expect(count).toBe(1)
-    expect(await listNotes()).toMatchObject([{ title: 'Keep me', body: 'important' }])
+    expect(await runDb(listNotes.pipe(Effect.orDie))).toMatchObject([
+      { title: 'Keep me', body: 'important' },
+    ])
   })
 
   it('imports a v1-era backup (rows without pinned/updatedAt)', async () => {
@@ -27,9 +38,9 @@ describe('backup export/import', () => {
       notes: [{ id: 'legacy', title: 'From the past', body: '', createdAt: 42 }],
     }
 
-    await importData(legacyPayload)
+    await runDb(importData(legacyPayload).pipe(Effect.orDie))
 
-    expect(await listNotes()).toEqual([
+    expect(await runDb(listNotes.pipe(Effect.orDie))).toEqual([
       {
         id: 'legacy',
         title: 'From the past',
@@ -41,8 +52,13 @@ describe('backup export/import', () => {
     ])
   })
 
-  it('rejects payloads that are not backups', async () => {
-    await expect(importData({ hello: 'world' })).rejects.toThrow()
-    expect(await listNotes()).toHaveLength(0)
+  it('rejects payloads that are not backups with a tagged error', async () => {
+    // The failure stays in the error channel all the way to the component,
+    // which is what lets the settings view tell "not a backup" apart from
+    // "the write failed" with `catchTags` instead of `instanceof`.
+    const error = await runDb(importData({ hello: 'world' }).pipe(Effect.flip, Effect.orDie))
+
+    expect(error).toBeInstanceOf(BackupInvalidError)
+    expect(await runDb(listNotes.pipe(Effect.orDie))).toHaveLength(0)
   })
 })

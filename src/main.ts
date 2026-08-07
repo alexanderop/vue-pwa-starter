@@ -13,6 +13,15 @@ app.config.errorHandler = (error, _instance, info) => {
   console.error('[Vue error]', error, info)
 }
 
+// Backstop for defects that escape a promise nobody returned to Vue — the
+// errorHandler above only sees rejections of promises handed back from event
+// handlers and lifecycle hooks. An Effect defect surfacing here means a bug
+// (every expected failure is caught by tag before `runDb`), so it must land
+// in the console, not vanish.
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Unhandled rejection]', event.reason)
+})
+
 app.use(i18n)
 app.use(createAppRouter())
 

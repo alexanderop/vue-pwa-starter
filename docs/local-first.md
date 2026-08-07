@@ -19,13 +19,17 @@ All storage access goes through `src/db/index.ts`. Views, features, and composab
 `src/db/schema.ts` shows the worked example (v1 → v2 adds `pinned` and `updatedAt`):
 
 - **The Dexie `upgrade()`** rewrites rows already in the database when the app updates.
-- **The converter** (`src/db/converters.ts`) normalizes *any* stored row into a complete domain object at read time.
+- **The converter** (`src/db/converters.ts`) decodes and normalizes *any* stored row into a complete domain object at read time.
 
-Why both? Because the migration only sees rows that were in the database at upgrade time. Old JSON backups imported later, or rows arriving from a future sync peer, bypass it. The stored type (`StoredDbNote`) keeps old-shape fields optional, so the compiler forces every read through the converter. The rule:
+Why both? Because the migration only sees rows that were in the database at upgrade time. Old JSON backups imported later, or rows arriving from a future sync peer, bypass it. The stored schema (`StoredDbNote`) keeps old-shape fields optional, so the compiler forces every read through the converter. The rule:
 
 > Never trust the shape of stored data; trust the converter.
 
-Both paths are tested: the upgrade in `src/__tests__/db/migration.spec.ts`, the converter in the unit tier, and the backup path in `src/__tests__/db/backup.spec.ts` (which imports a v1-era file).
+"Never trust" is meant literally: a table's TypeScript type is a claim, not a check. IndexedDB rows outlive app versions, get restored with a profile, and are editable from devtools, so `NotesRepo.list` decodes every row against the schema and fails with a `DatabaseError` when one does not match. One bad row fails the whole read on purpose — `StoredDbNote` accepts every shape this app has ever written, so a row that misses it is damaged rather than old, and silently dropping it would show a short list the user might then export over their last good backup.
+
+The same schema does triple duty: Dexie's table typing, that read-path decode, and backup validation in `src/db/backup.ts`. One definition means a field added to a note cannot reach disk while quietly disappearing from every export.
+
+All three paths are tested: the upgrade in `src/__tests__/db/migration.spec.ts`, the decode and converter rules in the unit tier, the rejected-row path in `src/__tests__/db/notes.spec.ts`, and the backup round-trip in `src/__tests__/db/backup.spec.ts` (which imports a v1-era file).
 
 ### Persistent storage is requested at boot
 
