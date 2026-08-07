@@ -19,6 +19,8 @@ catalogs:
     dexie: ^4.4.4
     # Pinned exactly — ~/Projects/opensource/effect is checked out at this version
     # (branch pinned/4.0.0-beta.105) as the agent-readable source of truth.
+    # @effect/atom-vue is versioned in lockstep with effect and must move with it.
+    '@effect/atom-vue': 4.0.0-beta.105
     effect: 4.0.0-beta.105
     vue: 3.5.38
     vue-i18n: ^11.4.6

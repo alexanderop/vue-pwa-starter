@@ -45,10 +45,10 @@ const de: MessageSchema = {
       unpin: 'Notiz {title} lösen',
       delete: 'Notiz {title} löschen',
     },
+    loadError: 'Deine Notizen konnten nicht geladen werden',
     toast: {
       created: 'Notiz gespeichert',
       deleted: 'Notiz gelöscht',
-      loadFailed: 'Deine Notizen konnten nicht geladen werden',
       saveFailed: 'Diese Notiz konnte nicht gespeichert werden',
       titleRequired: 'Eine Notiz braucht einen Titel',
       deleteFailed: 'Diese Notiz konnte nicht gelöscht werden',

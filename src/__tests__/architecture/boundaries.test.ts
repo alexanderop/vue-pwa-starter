@@ -35,7 +35,7 @@ const sfc = (importLine: string) =>
 describe('feature isolation', () => {
   it('rejects a feature importing another feature', async () => {
     const rules = await lint(
-      'src/features/notes/useNotesStore.ts',
+      'src/features/notes/atoms.ts',
       `import { thing } from '@/features/other/thing'\nexport const x = thing\n`,
     )
     expect(rules).toContain(RULE)
@@ -60,14 +60,11 @@ describe('feature isolation', () => {
 
 describe('shared layers', () => {
   it.each([
-    [
-      'src/components/AppShell.vue',
-      sfc(`import { x } from '@/features/notes/useNotesStore'\nvoid x`),
-    ],
-    ['src/composables/useThing.ts', `export { x } from '@/features/notes/useNotesStore'\n`],
-    ['src/stores/thing.ts', `export { x } from '@/features/notes/useNotesStore'\n`],
-    ['src/lib/thing.ts', `export { x } from '@/features/notes/useNotesStore'\n`],
-    ['src/db/thing.ts', `export { x } from '@/features/notes/useNotesStore'\n`],
+    ['src/components/AppShell.vue', sfc(`import { x } from '@/features/notes/atoms'\nvoid x`)],
+    ['src/composables/useThing.ts', `export { x } from '@/features/notes/atoms'\n`],
+    ['src/stores/thing.ts', `export { x } from '@/features/notes/atoms'\n`],
+    ['src/lib/thing.ts', `export { x } from '@/features/notes/atoms'\n`],
+    ['src/db/thing.ts', `export { x } from '@/features/notes/atoms'\n`],
   ])('rejects %s depending on a feature', async (filePath, code) => {
     expect(await lint(filePath, code)).toContain(RULE)
   })
@@ -75,7 +72,7 @@ describe('shared layers', () => {
   it('allows a view to compose a feature', async () => {
     const rules = await lint(
       'src/views/NotesView.vue',
-      sfc(`import { x } from '@/features/notes/useNotesStore'\nvoid x`),
+      sfc(`import { x } from '@/features/notes/atoms'\nvoid x`),
     )
     expect(rules).not.toContain(RULE)
   })
@@ -83,7 +80,7 @@ describe('shared layers', () => {
 
 describe('db encapsulation', () => {
   it.each([
-    'src/features/notes/useNotesStore.ts',
+    'src/features/notes/atoms.ts',
     'src/components/AppShell.vue',
     'src/composables/useThing.ts',
     'src/stores/thing.ts',
@@ -103,10 +100,7 @@ describe('db encapsulation', () => {
   })
 
   it('allows the public surface', async () => {
-    const rules = await lint(
-      'src/features/notes/useNotesStore.ts',
-      `export { listNotes } from '@/db'\n`,
-    )
+    const rules = await lint('src/features/notes/atoms.ts', `export { listNotes } from '@/db'\n`)
     expect(rules).not.toContain(RULE)
   })
 

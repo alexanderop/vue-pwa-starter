@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAtomSet } from '@effect/atom-vue'
 import { Effect } from 'effect'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -9,15 +10,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useReportFailure } from '@/composables/useReportFailure'
-import { isNoteDraft, runDb } from '@/db'
+import type { NoteDraft } from '@/db'
+import { createNote, dbMutation, isNoteDraft } from '@/db'
 import { useToastStore } from '@/stores/toast'
-import { useNotesStore } from '../useNotesStore'
 
 const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
-const notesStore = useNotesStore()
 const toast = useToastStore()
+
+// The write edge: only accepts a program whose failures are already handled,
+// and invalidates the notes read atoms once the write lands — the list
+// refreshes itself, no store re-read.
+const runMutation = useAtomSet(() => dbMutation, { mode: 'promise' })
 
 const title = ref('')
 const body = ref('')
@@ -31,7 +36,7 @@ const isSaving = ref(false)
  * with a trailing space is normalized by the repository rather than by every
  * caller remembering to.
  */
-const draft = computed(() => ({ title: title.value, body: body.value }))
+const draft = computed<NoteDraft>(() => ({ title: title.value, body: body.value }))
 
 // The button is disabled on exactly the rule the repository enforces, run
 // through the same schema rather than restated as `trim().length > 0`. The
@@ -48,16 +53,16 @@ const reportFailure = useReportFailure('notes')
 // the program rather than after it.
 //
 // The guard is still set synchronously, before the first await, so two
-// submits in the same tick cannot both reach the store. The runDb promise is
-// awaited (and so returned to Vue): with both failures caught by tag, a
-// rejection can only be a defect, which Vue routes to
+// submits in the same tick cannot both reach the repository. The mutation
+// promise is awaited (and so returned to Vue): with both failures caught by
+// tag, a rejection can only be a defect, which Vue routes to
 // `app.config.errorHandler` — but only for promises it is handed.
 async function save(): Promise<void> {
   if (!canSave.value) return
   isSaving.value = true
 
-  await runDb(
-    notesStore.add(draft.value).pipe(
+  await runMutation(
+    createNote(draft.value).pipe(
       Effect.tap(() =>
         Effect.sync(() => {
           title.value = ''

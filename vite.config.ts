@@ -73,4 +73,22 @@ export default defineConfig({
       '@': fileURLToPath(new URL('src', import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      // OTLP telemetry export in development (src/lib/observability.ts).
+      // Proxied rather than posted straight at :4318 so the request is
+      // same-origin: an OTLP payload is application/json, which triggers a
+      // CORS preflight that a stock Jaeger or otel-collector rejects — spans
+      // would vanish with only a console error to show for it. Going through
+      // Vite means the collector needs no CORS configuration at all.
+      //
+      // Inert unless VITE_OTLP_URL is set, so a dev server with no collector
+      // running never sees a request here (and never logs a refused one).
+      '/_otlp': {
+        target: process.env.OTLP_ENDPOINT ?? 'http://localhost:4318',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/_otlp/, ''),
+      },
+    },
+  },
 })

@@ -49,6 +49,9 @@ catalogs:
       specifier: ^7.4.1
       version: 7.4.1
   frontend:
+    '@effect/atom-vue':
+      specifier: 4.0.0-beta.105
+      version: 4.0.0-beta.105
     '@vueuse/core':
       specifier: ^14.3.0
       version: 14.4.0
@@ -174,6 +177,9 @@ importers:
 
   .:
     dependencies:
+      '@effect/atom-vue':
+        specifier: catalog:frontend
+        version: 4.0.0-beta.105(effect@4.0.0-beta.105)(vue@3.5.38(typescript@6.0.3))
       '@lucide/vue':
         specifier: catalog:ui
         version: 1.30.0(vue@3.5.38(typescript@6.0.3))
@@ -950,6 +956,12 @@ packages:
 
   '@cucumber/tag-expressions@9.1.0':
     resolution: {integrity: sha512-bvHjcRFZ+J1TqIa9eFNO1wGHqwx4V9ZKV3hYgkuK/VahHx73uiP4rKV3JVrvWSMrwrFvJG6C8aEwnCWSvbyFdQ==}
+
+  '@effect/atom-vue@4.0.0-beta.105':
+    resolution: {integrity: sha512-tPtq5tHIJgE+zCXp3NWAkuf5/UruU1kbE33vTJeZCDcyGKVRbzK8t0jW5bplCj74tROXucER/fIduLV1af0wbQ==}
+    peerDependencies:
+      effect: ^4.0.0-beta.105
+      vue: '>=3.5.39 <4.0.0'
 
   '@effect/vitest@4.0.0-beta.105':
     resolution: {integrity: sha512-2t1J/H/+9hAKDC1S3iFyUVZJhdMpKvuggnOGNXPTmxZcVdxG/VkhjQjo7wzOHWs6SZcX8Cr/EsB+uiVAn9G0Ng==}
@@ -5688,6 +5700,11 @@ snapshots:
       lodash.sortby: 4.7.0
 
   '@cucumber/tag-expressions@9.1.0': {}
+
+  '@effect/atom-vue@4.0.0-beta.105(effect@4.0.0-beta.105)(vue@3.5.38(typescript@6.0.3))':
+    dependencies:
+      effect: 4.0.0-beta.105
+      vue: 3.5.38(typescript@6.0.3)
 
   '@effect/vitest@4.0.0-beta.105(effect@4.0.0-beta.105)(vitest@4.1.10)':
     dependencies:

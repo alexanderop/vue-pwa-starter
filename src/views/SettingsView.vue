@@ -7,11 +7,11 @@ import PageLayout from '@/components/PageLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { useAtomSet } from '@effect/atom-vue'
 import { useLocale } from '@/composables/useLocale'
 import { useReportFailure } from '@/composables/useReportFailure'
 import { useTheme } from '@/composables/useTheme'
-import { exportData, importData, runDb } from '@/db'
-import { useNotesStore } from '@/features/notes/useNotesStore'
+import { dbMutation, exportData, importData, runDb } from '@/db'
 import type { SupportedLocale } from '@/i18n'
 import { downloadBackup, readBackupFile } from '@/lib/backupFile'
 import { useToastStore } from '@/stores/toast'
@@ -20,7 +20,11 @@ const { t } = useI18n()
 const { isDark } = useTheme()
 const { locale, setLocale, supportedLocales } = useLocale()
 const toast = useToastStore()
-const notesStore = useNotesStore()
+
+// Import writes rows, so it runs through the mutation atom: when the program
+// lands, the notes read atoms are invalidated and re-read the imported data
+// — no manual store reload. Export only reads, so it stays on `runDb`.
+const runMutation = useAtomSet(() => dbMutation, { mode: 'promise' })
 
 // The shared failure branch: a structured log for the developer, a toast for
 // the user — see useReportFailure for why it is an Effect.
@@ -71,16 +75,15 @@ async function handleImportFile(event: Event): Promise<void> {
 
   const failed = reportFailure('import backup', t('settings.data.importError'))
 
-  // Read the file, validate it as a backup, write it, then re-read the store —
-  // one program, three distinct ways to fail, matched by tag: a payload that
-  // is not a backup gets its own message, an unreadable file or a failed write
-  // stays generic. A tag left out of `catchTags` stays in the error channel,
-  // so adding a fourth failure to the pipeline breaks the build at `runDb`
-  // until it is handled here.
-  await runDb(
+  // Read the file, validate it as a backup, write it — one program, three
+  // distinct ways to fail, matched by tag: a payload that is not a backup
+  // gets its own message, an unreadable file or a failed write stays generic.
+  // A tag left out of `catchTags` stays in the error channel, so adding a
+  // fourth failure to the pipeline breaks the build at `runMutation` until it
+  // is handled here.
+  await runMutation(
     readBackupFile(file).pipe(
       Effect.flatMap(importData),
-      Effect.flatMap(() => notesStore.load()),
       Effect.tap(() => Effect.sync(() => toast.showToast(t('settings.data.importSuccess')))),
       Effect.catchTags({
         'Db.BackupInvalidError': reportFailure('import backup', t('settings.data.invalidBackup')),

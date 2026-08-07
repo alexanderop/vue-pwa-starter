@@ -1,16 +1,14 @@
 import { Effect, ManagedRuntime } from 'effect'
-import { NotesRepo } from './repositories/notes'
+import { dbLayer, type DbServices } from './layer'
 
 /**
- * One runtime for the whole persistence layer. The layer is built lazily on
- * first use and lives for the lifetime of the page — a SPA never disposes
- * it. Merge new repository layers into `dbLayer` as tables are added.
+ * The imperative runtime for the persistence layer. Components run their
+ * programs through the atoms in `./atoms.ts`; this ManagedRuntime backs
+ * `runDb`, the promise edge for programs that read and leave — backup
+ * export, test assertions against what is actually on disk. The layer is
+ * built lazily on first use and lives for the lifetime of the page, and is
+ * the same stack the atom runtime uses — see `./layer.ts`.
  */
-const dbLayer = NotesRepo.layer
-
-/** Everything dbLayer provides — the services a db program may require. */
-export type DbServices = NotesRepo
-
 const runtime = ManagedRuntime.make(dbLayer)
 
 /**

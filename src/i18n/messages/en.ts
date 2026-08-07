@@ -45,10 +45,12 @@ export default {
       unpin: 'Unpin note {title}',
       delete: 'Delete note {title}',
     },
+    // Rendered inline in place of the list — a load failure is a state of
+    // the page, not a passing notification.
+    loadError: 'Your notes could not be loaded',
     toast: {
       created: 'Note saved',
       deleted: 'Note deleted',
-      loadFailed: 'Your notes could not be loaded',
       saveFailed: 'That note could not be saved',
       titleRequired: 'A note needs a title',
       deleteFailed: 'That note could not be deleted',

@@ -17,12 +17,13 @@ Pure functions in `src/features/<name>/domain.ts` (sorting, deriving, validating
 
 ## 3. State
 
-A store per feature with VueUse `createGlobalState()` — `src/features/notes/useNotesStore.ts` is the template. Conventions:
+Atoms via `@effect/atom-vue` — `src/features/notes/atoms.ts` is the template. Conventions:
 
-- The store is the only writer; every mutation calls the repository, then re-reads, so state always mirrors disk.
-- Store methods **return** Effect programs, they do not run them. Nothing touches IndexedDB until a component handles the failures and hands the program to `runDb`, which only accepts `Effect<A, never, DbServices>`. Keep them functions rather than plain Effect values — `reactive()` deep-proxies nested objects and would wrap an Effect's internals along with it.
-- Expose a `$reset()` for test isolation and add it to `src/__tests__/helpers/reset.ts`.
-- Why not Pinia? Nothing here needs devtools time-travel or plugins; `createGlobalState` is a plain composable — less API, same reactivity, trivially testable.
+- **Reads are atoms.** Build them with `dbRuntime.atom(program)` and wire them with `Atom.withReactivity([NOTES_KEY])` (add a key per table). The atom's value is an `AsyncResult` — loading, failure, and data in one value — and components subscribe with `useAtomValue(() => yourAtom)`. Subscribing *is* the load; there is no `onMounted` fetch and no `isLoaded` flag.
+- **Writes go through `dbMutation`** (from `@/db`), which only accepts `Effect<unknown, never, DbServices>` — the component composes the repository program with `Effect.catchTag`/`Effect.catchTags` first, then hands it to the setter from `useAtomSet(() => dbMutation, { mode: 'promise' })`. When the write lands, the reactivity key is invalidated and every read atom re-reads — state always mirrors disk with no store method remembering to re-read.
+- Plain UI state (a sheet's open flag, toasts) is a writable `Atom.make(...)` behind a small composable — `src/stores/quickAdd.ts` and `src/stores/toast.ts` are the pattern, including the writable `computed` for anything a component two-way binds.
+- No `$reset()` needed: atom state lives in the registry, and browser tests get a fresh registry per render (see `src/__tests__/helpers/renderApp.ts`).
+- Why not Pinia? Nothing here needs devtools time-travel or plugins — and the registry-scoped atoms give the piece Pinia never had: reads that Effect programs can invalidate, with failures typed all the way into the template.
 
 ## 4. UI
 

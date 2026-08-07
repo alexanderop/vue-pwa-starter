@@ -38,6 +38,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@effect/atom-vue": "catalog:frontend",
     "@lucide/vue": "catalog:ui",
     "@tailwindcss/vite": "catalog:ui",
     "@vueuse/core": "catalog:frontend",
@@ -98,7 +99,7 @@
     {
       "name": "production JavaScript",
       "path": "dist/assets/*.js",
-      "limit": "160 kB"
+      "limit": "170 kB"
     }
   ],
   "lint-staged": {

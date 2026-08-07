@@ -34,6 +34,7 @@ pnpm build && pnpm size-limit                     # bundle budget
 | Testing | Six tiers: unit (Node, ~100 ms), browser (Vitest browser mode), a11y (axe-core), visual (screenshots), architecture (ArchUnitTS), e2e (playwright-bdd against the production build). See [docs/testing-strategy.md](docs/testing-strategy.md) |
 | Quality gates | oxlint + ESLint + Prettier + markdownlint, knip (dead exports), size-limit (bundle budget), husky pre-commit gate (~15 s) |
 | PWA | vite-plugin-pwa with update prompt, icons generated from one SVG at build time, offline precache, web-vitals seam |
+| Observability | Every db operation is a named Effect span already; opt into OTLP export in development with one env var — no `@opentelemetry/*` dependency, nothing in the production bundle. See [Tracing in development](#tracing-in-development) |
 | CI | Sharded GitHub Actions pipeline, actions pinned by SHA, zizmor-clean |
 | i18n | vue-i18n with typed message keys, English + German |
 | Agent-ready | A `CLAUDE.md`/`AGENTS.md` that teaches coding agents the conventions |
@@ -58,7 +59,7 @@ How the data layer implements this: [docs/local-first.md](docs/local-first.md)
 ```text
 src/features/      Feature-owned UI, state, and domain logic (features never import features)
 src/db/            Dexie schema, converters, repositories — the only place that touches storage
-src/stores/        Shared app-wide singleton state (VueUse createGlobalState, not Pinia)
+src/stores/        Shared app-wide state (@effect/atom-vue atoms, not Pinia)
 src/composables/   Shared reactive logic (2+ consumers)
 src/views/         Route-level pages; may compose multiple features
 src/components/    App shell + UI shared across features
@@ -68,6 +69,26 @@ test/e2e/          playwright-bdd features + steps
 ```
 
 These boundaries are not just documentation — they are enforced by [architecture tests](src/__tests__/architecture/architecture.test.ts) over the module graph and by `no-restricted-imports` rules in [eslint.config.ts](eslint.config.ts), which also cover `.vue` files. [A negative test](src/__tests__/architecture/boundaries.test.ts) proves the enforcement actually fires.
+
+## Tracing in development
+
+The instrumentation is already there: every repository operation is wrapped in `Effect.fn('NotesRepo.list')`, the backup programs add `Effect.withSpan`, and every reported failure emits a log record annotated with `boundary` / `operation` / `failure`. What is missing by default is somewhere to send it.
+
+Start a collector and point the app at it:
+
+```bash
+docker run --rm -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one
+cp .env.example .env.local
+pnpm dev
+```
+
+Open <http://localhost:16686>, pick the `vue-pwa-starter` service, and you get a span per db operation — including the `NotesRepo.create` → `NotesRepo.list` pair that shows a write invalidating `NOTES_KEY` and the read atom re-reading from disk.
+
+Three things make this cheap enough to ship in a starter:
+
+- The OTLP exporters live in `effect/unstable/observability` and post JSON over `fetch`, so there is no `@opentelemetry/*` SDK to install or bundle.
+- The dev server proxies `/_otlp` to `localhost:4318`, keeping the request same-origin — a stock collector rejects the CORS preflight an OTLP payload would otherwise trigger.
+- `import.meta.env.DEV` is a literal `false` in a production build, so the exporter is dead code. `pnpm size-limit` is what keeps that honest, and telemetry about a user's own notes never has the chance to leave their device.
 
 ## Adding your first feature
 
