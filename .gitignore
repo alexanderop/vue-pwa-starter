@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dev-dist
+stats.html
+
+# Caches
+.eslintcache
+.vitest
+node_modules/.tmp
+
+# Test output
+test-results
+playwright-report
+.features-gen
+coverage
+
+# Editor / OS
+.DS_Store
+*.local
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log

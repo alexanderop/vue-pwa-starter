@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.ts", "src/**/*.vue"],
+  "project": ["src/**/*.ts", "src/**/*.vue"],
+  "ignore": ["src/components/ui/**"],
+  "ignoreDependencies": [
+    "@vite-pwa/assets-generator",
+    "tailwindcss",
+    "tw-animate-css",
+    "workbox-window"
+  ],
+  "vitest": {
+    "entry": ["src/__tests__/**/*.spec.ts", "src/__tests__/**/*.test.ts"]
+  }
+}

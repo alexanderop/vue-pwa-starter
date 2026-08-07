@@ -1,0 +1,9 @@
+{
+  "config": {
+    // Long lines are fine in prose; wrap where it reads well.
+    "MD013": false,
+    // Inline HTML is used for the README feature matrix.
+    "MD033": false
+  },
+  "ignores": ["node_modules", "dist", "dev-dist", "coverage", "test-results", "playwright-report"]
+}
