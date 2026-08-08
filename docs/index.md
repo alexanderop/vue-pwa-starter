@@ -39,7 +39,7 @@ pnpm check          # ← verify your work: lint + format + types + knip + unit 
 pnpm dev            # Dev server
 pnpm test:unit      # Node unit tier — pure logic, ~100 ms
 pnpm test           # Browser tier (Vitest browser mode)
-pnpm test:a11y      # axe-core sweeps + ARIA snapshots (-- --update to rebaseline)
+pnpm test:a11y      # axe-core sweeps in light AND dark + ARIA snapshots (-- --update)
 pnpm test:visual    # Screenshot comparisons (test:visual:update to rebaseline)
 pnpm test:arch      # ArchUnitTS boundary rules
 pnpm test:mutation  # Stryker over the unit tier (~10 s) — grades the assertions,
@@ -49,7 +49,9 @@ pnpm test:e2e       # playwright-bdd against the production build
 pnpm lint           # oxlint + eslint + markdownlint (fix mode; lint:check to verify)
 pnpm format         # prettier (format:check to verify — CI runs the check)
 pnpm type-check     # vue-tsc --build
-pnpm knip           # Dead exports
+pnpm knip           # Dead exports + unused deps, twice: the whole repo, then the
+                    #   production graph alone (knip:production) — which catches
+                    #   code kept alive only by its own test.
 pnpm build          # Production build (+ pnpm size-limit for the budget)
 ```
 
@@ -143,13 +145,14 @@ an untrusted directory.
 - **UI is shadcn-vue-style primitives over reka-ui — the pattern is copied, not installed**: `src/components/ui/<name>/` holds one directory per primitive, one file per part, plus an `index.ts` barrel that is the only way in (`src/components/ui/dialog/` is the worked example — `Dialog` provides, `DialogContent`/`Header`/`Footer`/`Title`/`Description`/`Close` compose). `reka-ui` and `class-variance-authority` are the private substrate of that directory: importing either anywhere else is a lint error, as is reaching past a barrel, and a primitive may not import `@/db`, `@/stores/*`, or a feature. Every part follows the same five moves — accept the reka part's props **plus** `class`, `reactiveOmit(props, 'class')`, `useForwardProps`/`useForwardPropsEmits` for the rest, a `data-slot` naming the part, and `cn(defaults, props.class)` so the call site's classes win via `tailwind-merge`. **The tree is the variant**: a flag that changes *what* renders (`mode`, `showHeader`) is a missing child component, not a prop — `variant`/`size`/`class` change *how* and are fine, and belong in a `cva()` table in the barrel. A flat convenience wrapper (`<ConfirmDialog>`) is built *on top of* the primitives, never as flags on them. Enforced twice, like the db boundary: `no-restricted-imports` for the imports, `src/__tests__/architecture/uiPrimitives.test.ts` for file shape (barrel export, `data-slot`, `class` merged through `cn()`, at most three self-declared props beyond `class`). Full reasoning and the deliberate deviations from upstream: [ui-components.md](ui-components.md).
 - **Features never import other features**; shared layers never import features. Enforced twice: ArchUnitTS in `src/__tests__/architecture/` reads the TypeScript module graph, and `no-restricted-imports` in `eslint.config.ts` covers `.vue` files, which ArchUnitTS does not parse.
 - **Two-way binding**: `const open = defineModel<boolean>('open')` — except where a reka part already owns the model (`Switch` forwards `modelValue` to `SwitchRoot`), since two owners of one value drift.
-- **i18n**: every user-facing string in `src/i18n/messages/en.ts` and `de.ts`; the schema type makes missing keys a compile error.
+- **i18n**: every user-facing string in `src/i18n/messages/en.ts` and `de.ts`; the schema type makes missing keys a compile error. Two things it cannot see are checked in the arch tier (`i18nKeys.test.ts`): a key nothing reads (deleted UI leaves its strings behind, and translators pay for them forever), and a key **built at runtime** — ``t(`notes.age.${unit}`)`` compiles whatever `unit` holds, so the typed-key guarantee lapses exactly where it is easiest to get wrong. Interpolation is allowed but must be declared in that file's `INTERPOLATED` map, together with the keys it can produce, and both directions are checked.
 - **Tests are not colocated**: they live in `src/__tests__/`, mirroring the source tree. Which tier a test belongs in: [testing-strategy.md](testing-strategy.md); how to write one once you are there: [vitest-practices.md](vitest-practices.md). **Anything that drives the UI goes through a page object** — `src/__tests__/pages/` for the browser tiers, `test/e2e/pages/` for e2e — so a spec reads as the journey and a locator exists once. A spec that writes its own `getByRole(...)` for an app screen belongs in the object instead. **Both sides hand the objects over as fixtures** (`src/__tests__/fixtures.ts`, `test/e2e/fixtures.ts`): a spec or step declares the screen it drives (`async ({ notes }) => …`) and never mounts, resets, or unmounts by hand. Assertion helpers — the `expect*` members of a screen object, the axe helpers — are wrapped in `vi.defineHelper` so a failure reports at the spec line that called them.
+- **Lint carries two rule sets worth knowing about**: `eslint-plugin-regexp` (flat/recommended) and `@e18e/eslint-plugin`'s modernization set. The first is there for `no-super-linear-backtracking` — a ReDoS check, since a pattern that is quadratic in its input is a hang rather than a style question — and `no-misleading-capturing-group`. The second replaces a hand-rolled idiom with the platform one that has since landed (`Object.hasOwn`, `Array#at`, `toSorted`, `regex.test()`). e18e's `moduleReplacements` set is deliberately **not** enabled: swapping a dependency is a call for review, not for `--fix`.
 - Keep logic in `.ts` modules, not `<script setup>` — that is what makes it unit-testable and visible to the arch tests.
 
 ## Git workflow
 
-Conventional Commits with scope (`feat(notes): …`). The husky pre-commit gate (~15 s) runs lint-staged, type-check, test:unit, and knip on every commit — do not bypass it with `--no-verify`. Browser/a11y/visual/e2e tiers are CI's job (`.github/workflows/ci.yml`); run the ones your change touches before pushing.
+Conventional Commits with scope (`feat(notes): …`). The husky pre-commit gate (~15 s) runs lint-staged, type-check, test:unit, and knip on every commit — do not bypass it with `--no-verify`. Browser/a11y/visual/e2e tiers are CI's job (`.github/workflows/`); run the ones your change touches before pushing.
 
 ## Conventions in this bundle
 
