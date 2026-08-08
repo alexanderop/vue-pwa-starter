@@ -135,7 +135,7 @@ export function localPropNames(source: string): string[] {
 
   // `defineProps<Props>()` with the interface declared in the same file.
   const identifier = generic.trim()
-  if (/^[A-Za-z_$][\w$]*$/.test(identifier)) {
+  if (/^[A-Z_$][\w$]*$/i.test(identifier)) {
     const body = interfaceBody(source, identifier)
     if (body !== undefined) names.push(...memberNames(body))
   }
