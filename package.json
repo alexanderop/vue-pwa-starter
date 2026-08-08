@@ -35,7 +35,9 @@
     "lint:check": "run-s lint:oxlint:check lint:eslint:check lint:md",
     "format": "prettier --write \"**/*.{ts,mts,tsx,vue,js,mjs,cjs,json,css,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,mts,tsx,vue,js,mjs,cjs,json,css,yml,yaml}\"",
-    "knip": "knip",
+    "knip": "run-s knip:dev knip:production",
+    "knip:dev": "knip",
+    "knip:production": "knip --production --exclude dependencies",
     "size-limit": "size-limit",
     "prepare": "husky"
   },
@@ -57,6 +59,7 @@
     "web-vitals": "catalog:frontend"
   },
   "devDependencies": {
+    "@e18e/eslint-plugin": "catalog:lint",
     "@effect/vitest": "catalog:testing",
     "@playwright/test": "catalog:testing",
     "@size-limit/file": "catalog:lint",
@@ -77,6 +80,7 @@
     "axe-core": "catalog:testing",
     "eslint": "catalog:lint",
     "eslint-plugin-oxlint": "catalog:lint",
+    "eslint-plugin-regexp": "catalog:lint",
     "eslint-plugin-vue": "catalog:lint",
     "fake-indexeddb": "catalog:testing",
     "husky": "catalog:build",

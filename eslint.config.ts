@@ -1,7 +1,9 @@
 import { existsSync, readdirSync } from 'node:fs'
+import e18e from '@e18e/eslint-plugin'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 import oxlint from 'eslint-plugin-oxlint'
+import regexp from 'eslint-plugin-regexp'
 import pluginVue from 'eslint-plugin-vue'
 
 /**
@@ -183,6 +185,30 @@ export default defineConfigWithVueTs(
 
   pluginVue.configs['flat/recommended'],
   vueTsConfigs.recommended,
+
+  /**
+   * Regex correctness. Two of these rules are the reason the set is here
+   * rather than left to review: `no-super-linear-backtracking` is a ReDoS
+   * check — a pattern whose worst case is quadratic in the input, which on a
+   * regex fed anything user-shaped is a hang, not a style question — and
+   * `no-misleading-capturing-group` catches a group that cannot match what
+   * its author plainly meant. The rest are the ordinary correctness and
+   * simplification rules that come with them, and a regex is exactly the kind
+   * of code where "it looked right" is not evidence.
+   */
+  regexp.configs['flat/recommended'],
+
+  /**
+   * `@e18e/eslint-plugin`, modernization set only.
+   *
+   * These replace a hand-rolled idiom with the platform one that has since
+   * landed: `Object.hasOwn` over `hasOwnProperty.call`, `Array#at` over
+   * `length - 1` indexing, `Date.now()` over `new Date().getTime()`,
+   * `regex.test()` over `match() !== null`. Cheaper at runtime, and shorter to
+   * read. Not enabled: `moduleReplacements`, which is about swapping
+   * dependencies — a call for review, not for a lint rule with `--fix`.
+   */
+  e18e.configs.modernization,
 
   {
     name: 'app/rules',

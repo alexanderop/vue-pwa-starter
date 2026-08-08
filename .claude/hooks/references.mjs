@@ -50,7 +50,7 @@ const normalize = (value) =>
 
 // Accepts owner/repo, host/path, and full git URLs.
 const cloneUrl = (repository) =>
-  /^(https?:|git@|ssh:|file:)/.test(repository)
+  /^(?:https?:|git@|ssh:|file:)/.test(repository)
     ? repository
     : `https://github.com/${repository}.git`
 
