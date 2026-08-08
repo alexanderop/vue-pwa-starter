@@ -17,8 +17,6 @@ test-results
 playwright-report
 .features-gen
 coverage
-# JUnit reports, written in CI for the Codecov test-results upload.
-test-report.junit.xml
 
 # Only the visual tier keeps screenshot baselines. A __screenshots__ directory
 # under any other tier holds Vitest's on-failure captures, which are debugging
