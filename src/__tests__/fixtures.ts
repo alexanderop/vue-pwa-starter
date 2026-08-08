@@ -49,12 +49,43 @@ export const it = test
    * an `afterEach` that remembers to switch it back. `resetAppState` returns
    * the color-scheme preference to `auto`; the class is what a test sets
    * directly, and what this puts back.
+   *
+   * `dark()` is async because the app animates the change: the tab bar carries
+   * `transition-colors`, so for ~150ms after the class lands every colour on
+   * screen is a blend of the two themes. Anything that reads colour in that
+   * window — a screenshot, an axe contrast check — grades a frame that no user
+   * ever sees, and does it differently each run. Awaiting the transitions is
+   * what makes both tiers deterministic; it is not a sleep dressed up.
    */
   .extend('theme', async ({}, { onCleanup }) => {
     onCleanup(() => document.documentElement.classList.remove('dark'))
     return {
-      dark(): void {
+      async dark(): Promise<void> {
         document.documentElement.classList.add('dark')
+        await settleTransitions()
       },
     }
   })
+
+/**
+ * Waits out every CSS transition currently running.
+ *
+ * Filtered to `CSSTransition` on purpose: `getAnimations()` also returns
+ * keyframe animations, and a looping one (a spinner, anything from
+ * tw-animate-css) has a `finished` promise that never resolves — awaiting the
+ * unfiltered list is a hang waiting for the first infinite animation to ship.
+ */
+async function settleTransitions(): Promise<void> {
+  // One frame first: a transition provoked by a class change does not exist
+  // until style is recalculated, so without this there is nothing to await.
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+
+  await Promise.all(
+    document
+      .getAnimations()
+      .filter((animation) => animation instanceof CSSTransition)
+      // A transition cancelled mid-flight rejects; that it is over is all we
+      // are waiting for, and why it ended does not change the answer.
+      .map((animation) => animation.finished.catch(() => undefined)),
+  )
+}

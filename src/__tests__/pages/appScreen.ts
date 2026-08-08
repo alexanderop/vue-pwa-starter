@@ -2,6 +2,7 @@ import { expect, vi } from 'vitest'
 import type { Locator } from 'vitest/browser'
 import { page } from 'vitest/browser'
 import { InstallPrompt } from './installPrompt'
+import { UpdatePrompt } from './updatePrompt'
 
 /**
  * Screen objects: the browser tiers' page-object DSL.
@@ -46,6 +47,9 @@ export abstract class AppScreen {
    * any one view — so they hang off the base class, not off NotesScreen.
    */
   readonly install = new InstallPrompt()
+
+  /** The "update available" banner, mounted app-wide in App.vue as well. */
+  readonly update = new UpdatePrompt()
 
   protected constructor(
     /** The mounted subtree — what the a11y sweep and screenshots are scoped to. */

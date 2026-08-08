@@ -37,3 +37,13 @@ export function usePwaUpdate() {
 
   return { needRefresh, reload, dismiss }
 }
+
+/**
+ * Test seam, mirroring `resetLocaleState` and `resetThemeState`: the flag
+ * above is module state with no storage behind it, so a test that raises the
+ * banner would otherwise leave it raised for every later test in the file.
+ * Called by `resetAppState` — see src/__tests__/helpers/reset.ts.
+ */
+export function resetPwaUpdateState(): void {
+  needRefresh.value = false
+}
