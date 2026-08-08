@@ -12,14 +12,23 @@ Six tiers, each answering a different question. The point of the tiers is **plac
 
 ## The tiers
 
-| Tier | Command | Runtime | Question it answers |
-| --- | --- | --- | --- |
-| unit | `pnpm test:unit` | Node, ~100 ms | Is the pure logic right? |
-| default | `pnpm test` | Real Chromium (Vitest browser mode) | Do components and features behave, wired together? |
-| a11y | `pnpm test:a11y` | Real Chromium + axe-core | Are rendered screens accessible, and is their structure still there? |
-| visual | `pnpm test:visual` | Real Chromium screenshots | Did the UI change when I didn't mean it to? |
-| arch | `pnpm test:arch` | Node + ArchUnitTS/ESLint | Are the layer boundaries intact, and does the enforcement fire? |
-| e2e | `pnpm test:e2e` | Playwright against the **production build** | Does the shipped artifact work end to end? |
+| Tier    | Command            | Runtime                                     | Question it answers                                                  |
+| ------- | ------------------ | ------------------------------------------- | -------------------------------------------------------------------- |
+| unit    | `pnpm test:unit`   | Node, ~100 ms                               | Is the pure logic right?                                             |
+| default | `pnpm test`        | Real Chromium (Vitest browser mode)         | Do components and features behave, wired together?                   |
+| a11y    | `pnpm test:a11y`   | Real Chromium + axe-core, light and dark    | Are rendered screens accessible, and is their structure still there? |
+| visual  | `pnpm test:visual` | Real Chromium screenshots                   | Did the UI change when I didn't mean it to?                          |
+| arch    | `pnpm test:arch`   | Node + ArchUnitTS/ESLint                    | Are the layer boundaries intact, and does the enforcement fire?      |
+| e2e     | `pnpm test:e2e`    | Playwright against the **production build** | Does the shipped artifact work end to end?                           |
+
+## One driver, two runners
+
+Three of those rows say "real Chromium" and the fourth says Playwright, and all four mean the same binary. `vitest.config.ts` sets `provider: playwright()` (`@vitest/browser-playwright`), so the browser tiers drive Playwright's Chromium too — Vitest browser mode ships no automation of its own, it picks a provider. e2e differs by running under `@playwright/test` (a `Pixel 7` profile, still Chromium) rather than under Vitest. There is one automation library in this repo, not two.
+
+What actually differs is **where the test code runs**, and that explains more of the rules below than the API difference does:
+
+- **Browser tiers** — Vitest compiles the spec through Vite and runs it _in the page_, in the same realm as the component. So a spec can hold the mounted app, call `runDb(listNotes)` and assert against IndexedDB directly (`src/__tests__/features/notes/notesFlow.spec.ts`), and have `fake-indexeddb` swapped in per file. The same realm is also the limit: no `node:*`, no filesystem, no local HTTP server. A unit-tier test that reaches for one of those does not move up a tier unchanged.
+- **e2e** — the spec runs in Node and drives the page over a channel. It gets the Node side back, and gives up access to the app's modules entirely: everything it knows arrives through the DOM. That is the tier's point rather than its handicap — it sees only what the shipped artifact exposes to a user, service worker and real IndexedDB included.
 
 ## Which tier does my test belong in?
 
@@ -27,9 +36,19 @@ Work down this list and stop at the first match:
 
 1. **Pure function, no DOM, no IndexedDB?** → `unit` (`src/__tests__/unit/`). This tier runs in the pre-commit hook, so it must stay in the hundreds of milliseconds. Extract logic out of components into plain `.ts` modules (see `src/features/notes/domain.ts`) precisely so it can live here.
 2. **Needs a rendered component, the router, or the database?** → `default` (`src/__tests__/<area>/`). Browser mode means real CSS, real events, real browser APIs — no jsdom approximations. IndexedDB is replaced by fake-indexeddb per test file for speed and isolation.
-3. **Asserting on accessibility?** → `a11y` (`src/__tests__/a11y/`). Axe sweeps whole rendered screens; per-control a11y (labels, roles) belongs in the `default` specs that exercise the control. Rules axe classifies as page-level (landmark structure, `region`, `page-has-heading-one`) are skipped when the sweep is scoped to a container, so `assertNoPageLevelViolations(screen)` runs them against the document instead — it takes the mounted screen because an empty document passes every one of them. `html-has-lang` and `document-title` are not among them — in this tier they would grade the Vitest runner's page, so the shipped index.html is checked in e2e. The tier's other half is `ariaStructure.spec.ts`: ARIA snapshots, which catch semantics *disappearing* (a `<nav>` that becomes a `<div>`) where axe reports no violation at all. See [vitest-practices.md](vitest-practices.md#aria-snapshots-for-structure-axe-for-violations).
+3. **Asserting on accessibility?** → `a11y` (`src/__tests__/a11y/`). Axe sweeps whole rendered screens; per-control a11y (labels, roles) belongs in the `default` specs that exercise the control. Rules axe classifies as page-level (landmark structure, `region`, `page-has-heading-one`) are skipped when the sweep is scoped to a container, so `assertNoPageLevelViolations(screen)` runs them against the document instead — it takes the mounted screen because an empty document passes every one of them. `html-has-lang` and `document-title` are not among them — in this tier they would grade the Vitest runner's page, so the shipped index.html is checked in e2e. The tier's other half is `ariaStructure.spec.ts`: ARIA snapshots, which catch semantics _disappearing_ (a `<nav>` that becomes a `<div>`) where axe reports no violation at all. See [vitest-practices.md](vitest-practices.md#aria-snapshots-for-structure-axe-for-violations).
+
+   Two things about this tier are easy to get wrong and are therefore enforced rather than remembered:
+
+   - **Every sweep runs in both themes.** `color-contrast` is the rule this tier reports most, and the only one whose answer depends on which palette is live — a light-only run grades half the app, and dark is the half nobody looks at by accident. The sweeps are a `describe.each` over `['light', 'dark']`; the structure sweeps are not repeated, since landmarks do not change colour. Switching theme is `await theme.dark()`, and the `await` is load-bearing: the tab bar carries `transition-colors`, so for ~150 ms every colour on screen is a blend of the two themes. The fixture waits the transitions out — without that, axe grades a frame no user ever sees, differently each run.
+   - **A component only gets swept if some sweep renders it**, and the default screen sweeps render the empty state of everything. A note card, a toast, an install banner, the update banner: none of them are on screen unless a sweep puts them there. `src/__tests__/a11y/coverage.ts` is the ledger — every component names the sweep that renders it, or names why it is not swept — and `architecture/a11yCoverage.test.ts` fails when a component is in neither, when an entry is stale, or when a declared sweep is one no spec runs. Adding a component is therefore a decision about its a11y coverage, not a silent omission. It found `heading-order` in `NoteCard` the day it was written.
+
 4. **Asserting nothing changed visually?** → `visual` (`src/__tests__/visual/`).
-5. **Asserting an import boundary or dependency rule?** → `arch` (`src/__tests__/architecture/`). Two things live there: ArchUnitTS rules over the real module graph, and `boundaries.test.ts`, which feeds ESLint deliberate violations. The second exists because ArchUnitTS does not parse `.vue` files and because "the codebase has no violations" also passes when nothing is being enforced — the actual `.vue` coverage comes from `no-restricted-imports` in `eslint.config.ts`.
+5. **Asserting a project-wide rule — an import boundary, or that another tier is doing its job?** → `arch` (`src/__tests__/architecture/`). It runs in Node over the whole source tree, which is what the files here have in common. Four things live there:
+   - ArchUnitTS rules over the real module graph.
+   - `boundaries.test.ts`, which feeds ESLint deliberate violations. It exists because ArchUnitTS does not parse `.vue` files and because "the codebase has no violations" also passes when nothing is being enforced — the actual `.vue` coverage comes from `no-restricted-imports` in `eslint.config.ts`.
+   - `uiPrimitives.test.ts`, the file-shape rules for `src/components/ui/` ([ui-components.md](ui-components.md)).
+   - `a11yCoverage.test.ts` and `i18nKeys.test.ts`, which are **tests about the tests and the catalogue**. Both answer a question their own subject cannot: the a11y tier cannot tell you which screens it forgot, and the type system cannot see a message key that nothing reads or one assembled at runtime. That is the same reasoning as `boundaries.test.ts` — a green check means nothing until you know it would go red.
 6. **Proving a user journey against what actually ships (service worker, real IndexedDB, production bundle)?** → e2e (`test/e2e/`, Gherkin + playwright-bdd). Keep these few and load-bearing — the offline-reload scenario is the canonical example: it cuts the network before reloading, so it fails unless the service worker precached the shell.
 
 ## Test quality bar
@@ -37,32 +56,33 @@ Work down this list and stop at the first match:
 - Verify observable behavior through the public interface — what a user or caller sees.
 - Mock only at system boundaries (time, randomness, network). Never mock internal collaborators; the browser tier exists so you don't have to.
 - No call-count/order assertions, no reaching into component internals.
+- **An unexpected `console.warn` or `console.error` fails the test.** Installed once for every browser tier in `src/__tests__/setup.ts`, so no spec can opt out by forgetting. This is not tidiness: a missing required prop, a prop of the wrong type, a `v-model` pointed at nothing, a duplicate `v-for` key and a component that resolved to nothing are all _only_ reported this way. None of them throw, so without the gate a spec can render a broken component, assert on the text that still reached the screen, and pass. The allowlist in `helpers/consoleGate.ts` takes specific patterns with a reason each — never a broad one like `/Vue warn/`, which switches the gate off while looking like configuration.
 - Order independence is non-negotiable. In the browser tiers the screen fixtures own it — a fixture resets the app state before it mounts and unmounts when the test ends, so a spec cannot forget. A test that needs the reset without a screen still calls `beforeEach(resetAppState)`.
 
 ## Every UI test goes through a page object
 
 A spec says what the user did; one object says how. Nothing that drives the UI writes its own `getByRole('button', { name: 'Add a note' })` — four tiers used to spell out the same four locators, so a renamed label was a grep instead of an edit.
 
-- **Browser tiers** — `src/__tests__/pages/`, one *screen* object per screen, handed to specs as fixtures from `src/__tests__/fixtures.ts`: `it('…', async ({ notes }) => …)`, then `notes.addNote({ title })`, `notes.expectNote(title)`. The fixture mounts and unmounts, so no spec calls `open()` or `close()` itself. `AppScreen` holds what every screen shares (the mounted container, the app root, the tab bar, toasts).
+- **Browser tiers** — `src/__tests__/pages/`, one _screen_ object per screen, handed to specs as fixtures from `src/__tests__/fixtures.ts`: `it('…', async ({ notes }) => …)`, then `notes.addNote({ title })`, `notes.expectNote(title)`. The fixture mounts and unmounts, so no spec calls `open()` or `close()` itself. `AppScreen` holds what every screen shares (the mounted container, the app root, the tab bar, toasts).
 - **e2e** — `test/e2e/pages/`, the same vocabulary against Playwright locators, handed to steps as fixtures from `test/e2e/fixtures.ts`. Every Gherkin step is one line that names the intent; `notes.feature` stays readable by someone who never opens the steps.
 
 Fixtures on both sides is the point: a browser-tier spec and a Gherkin step now open the same way, and neither carries lifecycle bookkeeping. [vitest-practices.md](vitest-practices.md) has the rules for writing one.
 
-Two objects rather than one shared one: the drivers are different APIs (`vitest/browser` locators and `expect.element` vs Playwright's). What stays in step is the *names* — a step and a browser-tier spec read alike, which is what makes the pair easy to keep honest.
+Two objects rather than one shared one, and the reason is the split above rather than taste: the driver is the same Playwright, but a browser-tier object queries from inside the page (`vitest/browser` locators, `expect.element`) while an e2e object queries it from Node (Playwright's own locators, awaited over the channel). No wrapper reconciles those without becoming the thing it wraps. What stays in step is the _names_ — a step and a browser-tier spec read alike, which is what makes the pair easy to keep honest.
 
 The rules that keep them from becoming a second app:
 
 - **One object per screen** (mirroring `src/views/`); a nested part gets its own, mirroring the component that renders it — `QuickAddSheet` ↔ `QuickAddNoteSheet.vue`.
 - **Locators stay roles and accessible names.** An object that reaches for `data-testid` has stopped testing what a user can find. The app root is the one exception, and only the visual tier uses it, to frame the screenshot.
 - **They stop at the UI.** `runDb(listNotes)` assertions stay in the spec: that a note survived to IndexedDB is the point of the test, not a detail of the page.
-- **Waits live in the object, not the spec.** `openQuickAdd()` waits for the lazy-loaded sheet — and waits for it to be *usable*, not merely rendered, since `expectReady` asserts the Save button is in the viewport rather than clipped below the fold. `addNote()` waits for the sheet to close, since it closes only once the write has landed, which is what makes a second `addNote()` safe to call straight after.
+- **Waits live in the object, not the spec.** `openQuickAdd()` waits for the lazy-loaded sheet — and waits for it to be _usable_, not merely rendered, since `expectReady` asserts the Save button is in the viewport rather than clipped below the fold. `addNote()` waits for the sheet to close, since it closes only once the write has landed, which is what makes a second `addNote()` safe to call straight after.
 - **Assertions are `vi.defineHelper` fields, not methods.** `readonly expectNote = vi.defineHelper(async (title) => …)`. The wrapper reports the failure at the spec line that called it instead of somewhere inside the object — the thing that makes a page object safe to keep pushing behaviour into. Locators and actions stay ordinary methods. (Browser locator assertions already report at the call site; plain `expect` and `expect.poll` do not, and the rule is uniform so nobody has to check which they wrote — [vitest-practices.md](vitest-practices.md#every-assertion-helper-is-wrapped-in-videfinehelper).)
 
 ## Properties, and when one earns its place
 
 `it.prop` and `it.effect.prop` (from `@effect/vitest`) run a test body against ~100 generated inputs instead of one hand-picked one. They belong to the **unit tier only** — a property is the same test a hundred times over, which pure logic absorbs in milliseconds and the browser tiers cannot afford.
 
-Reach for one when the thing you want to say is true of *every* input rather than at a boundary, and you can state it without reimplementing the code under test. Three shapes cover most cases:
+Reach for one when the thing you want to say is true of _every_ input rather than at a boundary, and you can state it without reimplementing the code under test. Three shapes cover most cases:
 
 - **Round-trip** — what one direction emits, the other accepts. `toNote`'s output must decode as a stored row again, because it lands in IndexedDB and in the user's next backup (`src/__tests__/unit/db/converters.spec.ts`).
 - **Invariant** — the operation preserves something. `sortNotes` is a reordering: same notes out as in, plus the ordering rule between every pair of neighbours (`src/__tests__/unit/notes/domain.spec.ts`).
@@ -70,7 +90,7 @@ Reach for one when the thing you want to say is true of *every* input rather tha
 
 Where a schema owns the shape, generate from the schema rather than hand-writing an arbitrary: `Schema.toArbitrary(StoredDbNote)` cannot drift from the validator the repository decodes rows with. That makes the property a test of the schema as well as of the code — which is the point, and worth being ready for.
 
-Keep the examples too. A property pins the *definition* of a behavior; an example pins a specific boundary that must not move, and reads far better when it fails.
+Keep the examples too. A property pins the _definition_ of a behavior; an example pins a specific boundary that must not move, and reads far better when it fails.
 
 **When a property fails, suspect the code before the generator.** `sortNotes` failed roughly one run in four on a generated `updatedAt: Number.NaN`, and the tempting fix — filter NaN out of the generated rows — would have converted a found bug into a hidden one. The generator was right: `Schema.Number` accepts NaN, so the read path accepted it too, and a NaN timestamp compares false against everything, landing the note at an arbitrary place in the list with "NaN days ago" under it. The fix was in `converters.ts` — timestamps are `Schema.Natural` — after which the generator stopped producing the value because the schema stopped allowing it. If a generated input really is impossible, say so in the schema and let the generator follow; narrowing the property is how you lose the read-path hole it just found.
 
@@ -93,6 +113,10 @@ Screenshot baselines live in `__screenshots__/` and are **platform-specific** (f
 
 - **Every commit** (husky, ~15 s): lint-staged, type-check, `test:unit`, knip.
 - **While working / before pushing** (`pnpm check`, ~8 s): lint, formatting, types, knip, `test:unit` and `test:arch`, run concurrently and reported together — every gate that needs no browser. Then the browser tiers your change touches. Formatting on commit only reaches staged files, so the `format:check` inside `pnpm check` is what catches the rest.
-- **CI on every PR**: everything, with the browser tier sharded, plus the mutation score as its own job (`.github/workflows/ci.yml`).
+- **CI on every PR** (`.github/workflows/`): everything, with the browser tier sharded, plus the mutation score as its own job. Alongside `ci.yml`:
+  - `autofix.yml` — runs the `--fix` variants and pushes the result back via autofix.ci, so the mechanical half of a red build becomes a commit instead of an errand. `lint:check` and `format:check` still run in `ci.yml` and still fail on whatever `--fix` cannot repair.
+  - `zizmor.yml` — static analysis of the workflows themselves, pedantic persona. The repo pins every action to a SHA and sets least-privilege `permissions` by hand; this is what keeps that true. The `harden-github-actions` skill runs the same tool on demand, which is not a gate.
+  - `dependency-diff.yml` + `dependency-diff-comment.yml` — what a lockfile change costs, on the PR that makes it: packages added, install size, and replacement suggestions from e18e's `module-replacements`. `size-limit` guards the bytes that reach a user, but arrives after the dependency is already in. Split in two so the job holding `pull-requests: write` never has a fork's code checked out beside it — see the comment at the top of each.
+  - Coverage and JUnit results go to Codecov per tier (`.github/actions/codecov`), and **every coverage status is informational**. The gate on test quality here is the mutation score, which asks whether the tests would notice a change rather than whether they ran a line; a coverage percentage next to it would be a second, weaker gate. The test-results upload is the half that earns its place on its own — it is what makes a test that fails one run in thirty visible, which the `flaky` tag currently has to be guessed at without.
 
 The principle: the cost of a check should match how often it runs. Fast checks run on every commit; minutes-long tiers are CI's job.

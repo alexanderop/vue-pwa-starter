@@ -214,6 +214,32 @@ the tiers and carries runner options:
 add `frontend`/`backend`-style tags that restate the tier structure — filter
 by project instead.
 
+## The console is asserted on
+
+Every browser tier fails on an unexpected `console.warn` or `console.error`.
+The gate is installed once in `src/__tests__/setup.ts` — nothing per spec.
+
+It is there because a whole class of Vue mistake is reported this way and no
+other: a missing required prop, a prop of the wrong type, a `v-model` pointed
+at nothing, a duplicate `v-for` key, a component that resolved to nothing.
+None of it throws. Without the gate, a spec renders a broken component, finds
+the text that still made it to the screen, and passes — and so does the next
+twenty.
+
+Two consequences when writing a spec:
+
+- **If a test you expect to pass fails on a warning, the warning is the bug.**
+  It was there before; it just had nowhere to be reported.
+- **A spec that provokes a warning on purpose** — proving a component rejects
+  bad input, say — asserts on it rather than tolerating it: read the spy in the
+  test itself. Do not widen the allowlist in `helpers/consoleGate.ts` for one
+  spec. That list is for noise from the harness and from libraries, each entry
+  a specific pattern with the reason it is not a defect; `/Vue warn/` would
+  switch the gate off while looking like configuration.
+
+The console still prints — `vi.spyOn` wraps the method, it does not replace
+it — so the output is there when a failure needs reading.
+
 ## What we deliberately do not use
 
 Recorded so the question does not get re-opened every few months.
