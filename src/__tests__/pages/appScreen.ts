@@ -1,6 +1,7 @@
 import { expect, vi } from 'vitest'
 import type { Locator } from 'vitest/browser'
 import { page } from 'vitest/browser'
+import { InstallPrompt } from './installPrompt'
 
 /**
  * Screen objects: the browser tiers' page-object DSL.
@@ -40,6 +41,12 @@ import { page } from 'vitest/browser'
  * assertion never requires knowing which of the two kinds you just wrote.
  */
 export abstract class AppScreen {
+  /**
+   * The install banner and dialog, mounted app-wide in App.vue rather than by
+   * any one view — so they hang off the base class, not off NotesScreen.
+   */
+  readonly install = new InstallPrompt()
+
   protected constructor(
     /** The mounted subtree — what the a11y sweep and screenshots are scoped to. */
     readonly container: HTMLElement,

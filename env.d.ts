@@ -15,3 +15,26 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/**
+ * The install-prompt surface, which no `lib.dom` ships: `beforeinstallprompt`
+ * is a Chromium extension to the platform, and `navigator.standalone` is a
+ * pre-standard iOS Safari flag. Declared globally rather than cast at the
+ * listener so `useInstallPrompt` registers a typed handler and reads a typed
+ * flag — see src/composables/useInstallPrompt.ts.
+ */
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: ReadonlyArray<string>
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+  /** Single-use: a second call on the same event rejects. */
+  prompt(): Promise<void>
+}
+
+interface WindowEventMap {
+  beforeinstallprompt: BeforeInstallPromptEvent
+}
+
+interface Navigator {
+  /** iOS Safari only: true when the page was launched from the home screen. */
+  readonly standalone?: boolean
+}

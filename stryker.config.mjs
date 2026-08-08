@@ -31,6 +31,7 @@ export default {
     'src/db/backup.ts',
     'src/features/*/domain.ts',
     'src/lib/backupFile.ts',
+    'src/lib/installPlatform.ts',
   ],
 
   // Reuse the previous run's verdicts for unchanged code+tests. The report

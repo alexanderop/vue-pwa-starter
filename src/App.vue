@@ -4,6 +4,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
+import PwaInstallPrompt from '@/components/PwaInstallPrompt.vue'
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt.vue'
 import ToastViewport from '@/components/ToastViewport.vue'
 import { useKeyboardInset } from '@/composables/useKeyboardInset'
@@ -58,6 +59,7 @@ const navItems = computed<Array<NavItem>>(() =>
 
     <QuickAddNoteSheet v-if="quickAdd.hasOpened" v-model:open="quickAdd.isOpen" />
     <PwaUpdatePrompt />
+    <PwaInstallPrompt />
     <ToastViewport />
   </div>
 </template>

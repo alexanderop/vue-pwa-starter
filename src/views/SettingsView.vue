@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { Download, Upload } from '@lucide/vue'
+import { Download, Smartphone, Upload } from '@lucide/vue'
 import { Effect } from 'effect'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PageLayout from '@/components/PageLayout.vue'
+import PwaInstallDialog from '@/components/PwaInstallDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useAtomSet } from '@effect/atom-vue'
+import { useInstallPrompt } from '@/composables/useInstallPrompt'
 import { useLocale } from '@/composables/useLocale'
 import { useReportFailure } from '@/composables/useReportFailure'
 import { useTheme } from '@/composables/useTheme'
@@ -20,6 +22,11 @@ const { t } = useI18n()
 const { isDark } = useTheme()
 const { locale, setLocale, supportedLocales } = useLocale()
 const toast = useToastStore()
+
+// The way back in after "Not now" — a dismissed hint is persisted forever, so
+// without this the install path would be a one-time offer.
+const { canInstall, isInstalled } = useInstallPrompt()
+const installDialogOpen = ref(false)
 
 // Import writes rows, so it runs through the mutation atom: when the program
 // lands, the notes read atoms are invalidated and re-read the imported data
@@ -125,6 +132,29 @@ async function handleImportFile(event: Event): Promise<void> {
         </div>
       </section>
 
+      <!-- Nothing to offer a browser that cannot install and is not installed
+           — an "install" row that leads to no instructions is worse than no
+           row at all. -->
+      <section v-if="canInstall || isInstalled" class="flex flex-col gap-3">
+        <h2 class="text-section-title font-semibold">{{ t('pwa.install.settings.title') }}</h2>
+        <div class="flex flex-col gap-4 rounded-lg border p-4">
+          <p v-if="isInstalled" class="text-sm text-muted-foreground">
+            {{ t('pwa.install.settings.installed') }}
+          </p>
+          <template v-else>
+            <p class="text-sm text-muted-foreground">
+              {{ t('pwa.install.settings.description') }}
+            </p>
+            <div>
+              <Button variant="outline" @click="installDialogOpen = true">
+                <Smartphone />
+                {{ t('pwa.install.settings.action') }}
+              </Button>
+            </div>
+          </template>
+        </div>
+      </section>
+
       <section class="flex flex-col gap-3">
         <h2 class="text-section-title font-semibold">{{ t('settings.data.title') }}</h2>
         <div class="flex flex-col gap-4 rounded-lg border p-4">
@@ -149,5 +179,7 @@ async function handleImportFile(event: Event): Promise<void> {
         </div>
       </section>
     </div>
+
+    <PwaInstallDialog v-model:open="installDialogOpen" />
   </PageLayout>
 </template>

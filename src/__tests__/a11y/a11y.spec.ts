@@ -1,6 +1,7 @@
 import { describe } from 'vitest'
 import { it } from '../fixtures'
-import { assertNoPageLevelViolations, assertNoViolations } from '../helpers/a11y'
+import { assertNoViolations, assertNoPageLevelViolations } from '../helpers/a11y'
+import { stubInstallPromptAvailable } from '../helpers/installEvent'
 
 describe('accessibility', () => {
   it('notes home has no violations', async ({ notes }) => {
@@ -16,6 +17,22 @@ describe('accessibility', () => {
     await notes.openQuickAdd()
 
     await assertNoViolations(notes.quickAdd.root.element())
+  })
+
+  it('the install banner has no violations', async ({ notes }) => {
+    stubInstallPromptAvailable()
+    await notes.install.expectVisible()
+
+    await assertNoViolations(notes.container)
+  })
+
+  it('the install dialog has no violations while open', async ({ notes }) => {
+    stubInstallPromptAvailable()
+    await notes.install.expectVisible()
+    // openDialog waits for the lazy-loaded dialog, so axe gets it mounted.
+    await notes.install.openDialog()
+
+    await assertNoViolations(notes.install.dialog.element())
   })
 
   // Container-scoped sweeps skip every rule axe classifies as page-level —
