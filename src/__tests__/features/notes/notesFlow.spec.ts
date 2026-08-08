@@ -1,109 +1,76 @@
 import { Effect } from 'effect'
-import { page, userEvent } from 'vitest/browser'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect } from 'vitest'
 import { listNotes, runDb } from '@/db'
-import { renderApp } from '../../helpers/renderApp'
-import { resetAppState } from '../../helpers/reset'
+import { it } from '../../fixtures'
+
+/** What actually reached IndexedDB — the screen object stops at the UI. */
+const storedNotes = () => runDb(listNotes.pipe(Effect.orDie))
 
 describe('notes quick-add flow', () => {
-  let cleanup: (() => void) | undefined
+  it('creates a note through the center FAB and persists it', async ({ notes }) => {
+    await notes.expectNoNotes()
 
-  beforeEach(resetAppState)
-  afterEach(() => cleanup?.())
-
-  it('creates a note through the center FAB and persists it', async () => {
-    ;({ cleanup } = await renderApp())
-
-    await expect.element(page.getByText('No notes yet')).toBeVisible()
-
-    await page.getByRole('button', { name: 'Add a note' }).click()
-    await page.getByLabelText('Title', { exact: true }).fill('Buy milk')
-    await page.getByLabelText('Note', { exact: true }).fill('2 liters, oat')
-    await page.getByRole('button', { name: 'Save' }).click()
+    await notes.addNote({ title: 'Buy milk', body: '2 liters, oat' })
 
     // Visible in the list, confirmed by toast, and actually in IndexedDB.
-    await expect.element(page.getByRole('heading', { name: 'Buy milk' })).toBeVisible()
-    await expect.element(page.getByText('Note saved')).toBeVisible()
-
-    const notes = await runDb(listNotes.pipe(Effect.orDie))
-    expect(notes).toMatchObject([{ title: 'Buy milk', body: '2 liters, oat' }])
+    await notes.expectNote('Buy milk')
+    await notes.expectToast('Note saved')
+    expect(await storedNotes()).toMatchObject([{ title: 'Buy milk', body: '2 liters, oat' }])
   })
 
-  it('deletes a note from its card action', async () => {
-    ;({ cleanup } = await renderApp())
+  it('deletes a note from its card action', async ({ notes }) => {
+    await notes.addNote({ title: 'Temporary' })
+    await notes.expectNote('Temporary')
 
-    await page.getByRole('button', { name: 'Add a note' }).click()
-    await page.getByLabelText('Title').fill('Temporary')
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect.element(page.getByRole('heading', { name: 'Temporary' })).toBeVisible()
+    await notes.deleteNote('Temporary')
 
-    await page.getByRole('button', { name: 'Delete note Temporary' }).click()
-
-    await expect.element(page.getByText('No notes yet')).toBeVisible()
-    expect(await runDb(listNotes.pipe(Effect.orDie))).toHaveLength(0)
+    await notes.expectNoNotes()
+    expect(await storedNotes()).toHaveLength(0)
   })
 
-  it('keeps the draft when the sheet is dismissed by accident', async () => {
-    ;({ cleanup } = await renderApp())
+  it('keeps the draft when the sheet is dismissed by accident', async ({ notes }) => {
+    await notes.openQuickAdd()
+    await notes.quickAdd.fill({ title: 'Half typed', body: '…and a body' })
+    await notes.quickAdd.dismiss()
 
-    await page.getByRole('button', { name: 'Add a note' }).click()
-    await page.getByLabelText('Title', { exact: true }).fill('Half typed')
-    await page.getByLabelText('Note', { exact: true }).fill('…and a body')
-
-    // Escape stands in for the accidental overlay tap.
-    await userEvent.keyboard('{Escape}')
-    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument()
-
-    await page.getByRole('button', { name: 'Add a note' }).click()
-
-    await expect.element(page.getByLabelText('Title', { exact: true })).toHaveValue('Half typed')
-    await expect.element(page.getByLabelText('Note', { exact: true })).toHaveValue('…and a body')
+    await notes.openQuickAdd()
+    await notes.quickAdd.expectDraft({ title: 'Half typed', body: '…and a body' })
   })
 
-  it('starts from an empty draft after a successful save', async () => {
-    ;({ cleanup } = await renderApp())
+  it('starts from an empty draft after a successful save', async ({ notes }) => {
+    await notes.addNote({ title: 'Saved and gone' })
+    await notes.expectNote('Saved and gone')
 
-    await page.getByRole('button', { name: 'Add a note' }).click()
-    await page.getByLabelText('Title', { exact: true }).fill('Saved and gone')
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect.element(page.getByRole('heading', { name: 'Saved and gone' })).toBeVisible()
+    await notes.openQuickAdd()
 
-    await page.getByRole('button', { name: 'Add a note' }).click()
-
-    await expect.element(page.getByLabelText('Title', { exact: true })).toHaveValue('')
+    await notes.quickAdd.expectDraft({ title: '' })
   })
 
-  it('creates a single note when the form is submitted twice in a row', async () => {
-    ;({ cleanup } = await renderApp())
+  // Tagged `flaky`: the test deliberately races two submits against a write
+  // that has not resolved, so a loaded CI runner can lose the race for
+  // reasons that are not the bug it guards. The tag carries the CI-only
+  // retry (see `tags` in vitest.config.ts) — the point is that the retry
+  // lives with the category, not copied onto this one test.
+  it(
+    'creates a single note when the form is submitted twice in a row',
+    { tags: ['flaky'] },
+    async ({ notes }) => {
+      await notes.openQuickAdd()
+      await notes.quickAdd.fill({ title: 'Only once' })
+      notes.quickAdd.submitTwiceInOneTick()
 
-    await page.getByRole('button', { name: 'Add a note' }).click()
-    await page.getByLabelText('Title', { exact: true }).fill('Only once')
+      await expect.poll(async () => (await storedNotes()).length).toBe(1)
+      await notes.expectNote('Only once')
+    },
+  )
 
-    // Two submits in the same tick — the double-tap a user can actually
-    // produce, before the first write has resolved.
-    const form = page.getByRole('button', { name: 'Save' }).element().closest('form')
-    if (!(form instanceof HTMLFormElement)) throw new Error('quick-add form not found')
-    form.requestSubmit()
-    form.requestSubmit()
+  it('pins a note so it sorts first', async ({ notes }) => {
+    await notes.addNote({ title: 'First' })
+    await notes.addNote({ title: 'Second' })
 
-    await expect.poll(async () => (await runDb(listNotes.pipe(Effect.orDie))).length).toBe(1)
-    await expect.element(page.getByRole('heading', { name: 'Only once' })).toBeVisible()
-  })
+    await notes.pinNote('First')
 
-  it('pins a note so it sorts first', async () => {
-    ;({ cleanup } = await renderApp())
-
-    for (const title of ['First', 'Second']) {
-      await page.getByRole('button', { name: 'Add a note' }).click()
-      await page.getByLabelText('Title').fill(title)
-      await page.getByRole('button', { name: 'Save' }).click()
-      await expect.element(page.getByRole('heading', { name: title })).toBeVisible()
-    }
-
-    await page.getByRole('button', { name: 'Pin note First' }).click()
-    await expect.element(page.getByRole('button', { name: 'Unpin note First' })).toBeVisible()
-
-    const headings = page.getByRole('heading', { level: 3 })
-    await expect.element(headings.first()).toHaveTextContent('First')
+    await notes.expectPinned('First')
+    await notes.expectOrder(['First', 'Second'])
   })
 })

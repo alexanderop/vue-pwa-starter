@@ -16,7 +16,7 @@ Six tiers, each answering a different question. The point of the tiers is **plac
 | --- | --- | --- | --- |
 | unit | `pnpm test:unit` | Node, ~100 ms | Is the pure logic right? |
 | default | `pnpm test` | Real Chromium (Vitest browser mode) | Do components and features behave, wired together? |
-| a11y | `pnpm test:a11y` | Real Chromium + axe-core | Are rendered screens accessible? |
+| a11y | `pnpm test:a11y` | Real Chromium + axe-core | Are rendered screens accessible, and is their structure still there? |
 | visual | `pnpm test:visual` | Real Chromium screenshots | Did the UI change when I didn't mean it to? |
 | arch | `pnpm test:arch` | Node + ArchUnitTS/ESLint | Are the layer boundaries intact, and does the enforcement fire? |
 | e2e | `pnpm test:e2e` | Playwright against the **production build** | Does the shipped artifact work end to end? |
@@ -27,7 +27,7 @@ Work down this list and stop at the first match:
 
 1. **Pure function, no DOM, no IndexedDB?** → `unit` (`src/__tests__/unit/`). This tier runs in the pre-commit hook, so it must stay in the hundreds of milliseconds. Extract logic out of components into plain `.ts` modules (see `src/features/notes/domain.ts`) precisely so it can live here.
 2. **Needs a rendered component, the router, or the database?** → `default` (`src/__tests__/<area>/`). Browser mode means real CSS, real events, real browser APIs — no jsdom approximations. IndexedDB is replaced by fake-indexeddb per test file for speed and isolation.
-3. **Asserting on accessibility?** → `a11y` (`src/__tests__/a11y/`). Axe sweeps whole rendered screens; per-control a11y (labels, roles) belongs in the `default` specs that exercise the control. Rules axe classifies as page-level (landmark structure, `region`, `page-has-heading-one`) are skipped when the sweep is scoped to a container, so `assertNoPageLevelViolations` runs them against the document instead. `html-has-lang` and `document-title` are not among them — in this tier they would grade the Vitest runner's page, so the shipped index.html is checked in e2e.
+3. **Asserting on accessibility?** → `a11y` (`src/__tests__/a11y/`). Axe sweeps whole rendered screens; per-control a11y (labels, roles) belongs in the `default` specs that exercise the control. Rules axe classifies as page-level (landmark structure, `region`, `page-has-heading-one`) are skipped when the sweep is scoped to a container, so `assertNoPageLevelViolations(screen)` runs them against the document instead — it takes the mounted screen because an empty document passes every one of them. `html-has-lang` and `document-title` are not among them — in this tier they would grade the Vitest runner's page, so the shipped index.html is checked in e2e. The tier's other half is `ariaStructure.spec.ts`: ARIA snapshots, which catch semantics *disappearing* (a `<nav>` that becomes a `<div>`) where axe reports no violation at all. See [vitest-practices.md](vitest-practices.md#aria-snapshots-for-structure-axe-for-violations).
 4. **Asserting nothing changed visually?** → `visual` (`src/__tests__/visual/`).
 5. **Asserting an import boundary or dependency rule?** → `arch` (`src/__tests__/architecture/`). Two things live there: ArchUnitTS rules over the real module graph, and `boundaries.test.ts`, which feeds ESLint deliberate violations. The second exists because ArchUnitTS does not parse `.vue` files and because "the codebase has no violations" also passes when nothing is being enforced — the actual `.vue` coverage comes from `no-restricted-imports` in `eslint.config.ts`.
 6. **Proving a user journey against what actually ships (service worker, real IndexedDB, production bundle)?** → e2e (`test/e2e/`, Gherkin + playwright-bdd). Keep these few and load-bearing — the offline-reload scenario is the canonical example: it cuts the network before reloading, so it fails unless the service worker precached the shell.
@@ -37,7 +37,26 @@ Work down this list and stop at the first match:
 - Verify observable behavior through the public interface — what a user or caller sees.
 - Mock only at system boundaries (time, randomness, network). Never mock internal collaborators; the browser tier exists so you don't have to.
 - No call-count/order assertions, no reaching into component internals.
-- Every test file resets its own state (`beforeEach(resetAppState)`) — order independence is non-negotiable.
+- Order independence is non-negotiable. In the browser tiers the screen fixtures own it — a fixture resets the app state before it mounts and unmounts when the test ends, so a spec cannot forget. A test that needs the reset without a screen still calls `beforeEach(resetAppState)`.
+
+## Every UI test goes through a page object
+
+A spec says what the user did; one object says how. Nothing that drives the UI writes its own `getByRole('button', { name: 'Add a note' })` — four tiers used to spell out the same four locators, so a renamed label was a grep instead of an edit.
+
+- **Browser tiers** — `src/__tests__/pages/`, one *screen* object per screen, handed to specs as fixtures from `src/__tests__/fixtures.ts`: `it('…', async ({ notes }) => …)`, then `notes.addNote({ title })`, `notes.expectNote(title)`. The fixture mounts and unmounts, so no spec calls `open()` or `close()` itself. `AppScreen` holds what every screen shares (the mounted container, the app root, the tab bar, toasts).
+- **e2e** — `test/e2e/pages/`, the same vocabulary against Playwright locators, handed to steps as fixtures from `test/e2e/fixtures.ts`. Every Gherkin step is one line that names the intent; `notes.feature` stays readable by someone who never opens the steps.
+
+Fixtures on both sides is the point: a browser-tier spec and a Gherkin step now open the same way, and neither carries lifecycle bookkeeping. [vitest-practices.md](vitest-practices.md) has the rules for writing one.
+
+Two objects rather than one shared one: the drivers are different APIs (`vitest/browser` locators and `expect.element` vs Playwright's). What stays in step is the *names* — a step and a browser-tier spec read alike, which is what makes the pair easy to keep honest.
+
+The rules that keep them from becoming a second app:
+
+- **One object per screen** (mirroring `src/views/`); a nested part gets its own, mirroring the component that renders it — `QuickAddSheet` ↔ `QuickAddNoteSheet.vue`.
+- **Locators stay roles and accessible names.** An object that reaches for `data-testid` has stopped testing what a user can find. The app root is the one exception, and only the visual tier uses it, to frame the screenshot.
+- **They stop at the UI.** `runDb(listNotes)` assertions stay in the spec: that a note survived to IndexedDB is the point of the test, not a detail of the page.
+- **Waits live in the object, not the spec.** `openQuickAdd()` waits for the lazy-loaded sheet — and waits for it to be *usable*, not merely rendered, since `expectReady` asserts the Save button is in the viewport rather than clipped below the fold. `addNote()` waits for the sheet to close, since it closes only once the write has landed, which is what makes a second `addNote()` safe to call straight after.
+- **Assertions are `vi.defineHelper` fields, not methods.** `readonly expectNote = vi.defineHelper(async (title) => …)`. The wrapper reports the failure at the spec line that called it instead of somewhere inside the object — the thing that makes a page object safe to keep pushing behaviour into. Locators and actions stay ordinary methods. (Browser locator assertions already report at the call site; plain `expect` and `expect.poll` do not, and the rule is uniform so nobody has to check which they wrote — [vitest-practices.md](vitest-practices.md#every-assertion-helper-is-wrapped-in-videfinehelper).)
 
 ## Properties, and when one earns its place
 

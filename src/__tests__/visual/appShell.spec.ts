@@ -1,7 +1,5 @@
-import { page } from 'vitest/browser'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { renderApp } from '../helpers/renderApp'
-import { resetAppState } from '../helpers/reset'
+import { describe, expect } from 'vitest'
+import { it } from '../fixtures'
 
 /**
  * Screenshot baselines live in __screenshots__/ next to this file and are
@@ -9,28 +7,17 @@ import { resetAppState } from '../helpers/reset'
  * after intentional UI changes — see docs/testing-strategy.md.
  */
 describe('visual regression', () => {
-  let cleanup: (() => void) | undefined
+  it('app shell, light', async ({ notes }) => {
+    await notes.expectNoNotes()
 
-  beforeEach(resetAppState)
-  afterEach(() => {
-    cleanup?.()
-    document.documentElement.classList.remove('dark')
+    await expect(notes.root).toMatchScreenshot('app-shell-light')
   })
 
-  it('app shell, light', async () => {
-    const app = await renderApp()
-    cleanup = app.cleanup
+  it('app shell, dark', async ({ notes, theme }) => {
+    await notes.expectNoNotes()
 
-    await expect.element(page.getByText('No notes yet')).toBeVisible()
-    await expect(page.getByTestId('app')).toMatchScreenshot('app-shell-light')
-  })
+    theme.dark()
 
-  it('app shell, dark', async () => {
-    const app = await renderApp()
-    cleanup = app.cleanup
-
-    await expect.element(page.getByText('No notes yet')).toBeVisible()
-    document.documentElement.classList.add('dark')
-    await expect(page.getByTestId('app')).toMatchScreenshot('app-shell-dark')
+    await expect(notes.root).toMatchScreenshot('app-shell-dark')
   })
 })

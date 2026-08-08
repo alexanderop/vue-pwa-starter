@@ -21,6 +21,7 @@ There is no `CLAUDE.md` and no `AGENTS.md`. A `SessionStart` hook (`.claude/hook
 | [Local-first](local-first.md) | Deciding whether something belongs on-device, or why the converter/migration pair exists |
 | [Adding a feature](adding-a-feature.md) | Building a new feature — the build order and the test home for each step |
 | [Testing strategy](testing-strategy.md) | Choosing which tier a test belongs in, or whether to write a property |
+| [Vitest practices](vitest-practices.md) | Writing a browser-tier spec — fixtures, assertion helpers, ARIA snapshots, tags |
 | [Driving the app with agent-browser](agent-browser.md) | Verifying a feature yourself in a real browser — before claiming it works |
 | [Mutation testing](mutation-testing.md) | Reading a surviving mutant, or changing what `pnpm test:mutation` grades |
 | [UI components](ui-components.md) | Any work in `src/components/ui/` — adding a primitive, or wondering why a component takes `class` |
@@ -38,7 +39,7 @@ pnpm check          # ← verify your work: lint + format + types + knip + unit 
 pnpm dev            # Dev server
 pnpm test:unit      # Node unit tier — pure logic, ~100 ms
 pnpm test           # Browser tier (Vitest browser mode)
-pnpm test:a11y      # axe-core sweeps
+pnpm test:a11y      # axe-core sweeps + ARIA snapshots (-- --update to rebaseline)
 pnpm test:visual    # Screenshot comparisons (test:visual:update to rebaseline)
 pnpm test:arch      # ArchUnitTS boundary rules
 pnpm test:mutation  # Stryker over the unit tier (~10 s) — grades the assertions,
@@ -143,7 +144,7 @@ an untrusted directory.
 - **Features never import other features**; shared layers never import features. Enforced twice: ArchUnitTS in `src/__tests__/architecture/` reads the TypeScript module graph, and `no-restricted-imports` in `eslint.config.ts` covers `.vue` files, which ArchUnitTS does not parse.
 - **Two-way binding**: `const open = defineModel<boolean>('open')` — except where a reka part already owns the model (`Switch` forwards `modelValue` to `SwitchRoot`), since two owners of one value drift.
 - **i18n**: every user-facing string in `src/i18n/messages/en.ts` and `de.ts`; the schema type makes missing keys a compile error.
-- **Tests are not colocated**: they live in `src/__tests__/`, mirroring the source tree. Which tier a test belongs in: [testing-strategy.md](testing-strategy.md).
+- **Tests are not colocated**: they live in `src/__tests__/`, mirroring the source tree. Which tier a test belongs in: [testing-strategy.md](testing-strategy.md); how to write one once you are there: [vitest-practices.md](vitest-practices.md). **Anything that drives the UI goes through a page object** — `src/__tests__/pages/` for the browser tiers, `test/e2e/pages/` for e2e — so a spec reads as the journey and a locator exists once. A spec that writes its own `getByRole(...)` for an app screen belongs in the object instead. **Both sides hand the objects over as fixtures** (`src/__tests__/fixtures.ts`, `test/e2e/fixtures.ts`): a spec or step declares the screen it drives (`async ({ notes }) => …`) and never mounts, resets, or unmounts by hand. Assertion helpers — the `expect*` members of a screen object, the axe helpers — are wrapped in `vi.defineHelper` so a failure reports at the spec line that called them.
 - Keep logic in `.ts` modules, not `<script setup>` — that is what makes it unit-testable and visible to the arch tests.
 
 ## Git workflow

@@ -45,6 +45,19 @@ const sharedTestConfig = {
   bail: process.env.CI ? 0 : 1,
   // Stricter locally for fast feedback, generous in CI (shared runners are slower).
   testTimeout: process.env.CI ? 15_000 : 8000,
+  // A blanket retry hides regressions: a failed assertion fails the same way
+  // the second time, so all a retry buys is a slower red. `condition` (4.1)
+  // narrows it to the errors that are the browser rather than the app —
+  // a lazy chunk that did not arrive, a page torn down mid-run. Locally,
+  // where a flake is a thing to look at, there is no retry at all.
+  retry: process.env.CI
+    ? {
+        count: 2,
+        delay: 250,
+        condition:
+          /Failed to fetch dynamically imported module|has been closed|Execution context was destroyed|net::ERR/i,
+      }
+    : 0,
   slowTestThreshold: 1000,
   includeTaskLocation: true,
   chaiConfig: { truncateThreshold: 999 },
@@ -70,6 +83,24 @@ export default defineConfig({
   optimizeDeps: optimizeDependencies,
   test: {
     coverage: coverageConfig,
+
+    // Tags (4.1) label a category that cuts across the tiers, and carry the
+    // runner options that category needs. They are not a second tiering:
+    // anything that follows a directory is already a project, and anything
+    // that follows a name is `-t`. Defined once here and inherited by every
+    // project; `strictTags` defaults to on, so a typo in a spec is an error
+    // rather than a silently untagged test. Keep the list short, and keep
+    // `src/__tests__/vitest.d.ts` in step.
+    tags: [
+      {
+        name: 'flaky',
+        description: 'Races the browser on purpose — retried on CI rather than deleted.',
+        retry: process.env.CI ? { count: 3, delay: 250 } : 0,
+        // Lower number wins, so this beats the project-level retry above for
+        // the tests that have earned a more generous one.
+        priority: 1,
+      },
+    ],
 
     // Tiered projects — see docs/testing-strategy.md for which tier a test
     // belongs in and why.

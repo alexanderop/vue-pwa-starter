@@ -1,5 +1,6 @@
 import axe from 'axe-core'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
+import type { AppScreen } from '../pages/appScreen'
 
 /**
  * Page-level rules axe only evaluates when the context is the whole
@@ -37,22 +38,38 @@ function report(results: axe.AxeResults) {
 /**
  * Runs axe-core against an element and fails with a readable list of
  * violations (rule id + offending selectors) instead of a generic diff.
+ *
+ * Wrapped in `vi.defineHelper` so the failure is reported at the `await
+ * assertNoViolations(...)` line in the spec rather than at the `expect`
+ * below. This one is load-bearing rather than stylistic: a plain `expect`
+ * keeps its own frame at the top of the stack, so without the wrapper every
+ * a11y failure in the suite points at the same line here, whichever screen
+ * produced it.
  */
-export async function assertNoViolations(context: Element): Promise<void> {
+export const assertNoViolations = vi.defineHelper(async (context: Element): Promise<void> => {
   const results = await axe.run(context, { resultTypes: ['violations'] })
   expect(report(results)).toEqual([])
-}
+})
 
 /**
  * Runs the document-scoped rules — landmark structure, heading order,
  * skip links, unlabelled content outside any landmark. These are the ones
- * `assertNoViolations` cannot reach, and they only mean anything with the
- * app mounted, so call it after rendering a screen.
+ * `assertNoViolations` cannot reach.
+ *
+ * They only mean anything with a screen on the page, and an empty document
+ * passes every one of them, so the screen is a parameter rather than a
+ * comment: hand over the one you mounted and it is checked before axe runs.
+ * axe itself is still pointed at `document`, the only context in which it
+ * evaluates these rules at all.
  */
-export async function assertNoPageLevelViolations(): Promise<void> {
-  const results = await axe.run(document, {
-    resultTypes: ['violations'],
-    runOnly: PAGE_LEVEL_RULES,
-  })
-  expect(report(results)).toEqual([])
-}
+export const assertNoPageLevelViolations = vi.defineHelper(
+  async (mounted: AppScreen): Promise<void> => {
+    expect(mounted.container.isConnected).toBe(true)
+
+    const results = await axe.run(document, {
+      resultTypes: ['violations'],
+      runOnly: PAGE_LEVEL_RULES,
+    })
+    expect(report(results)).toEqual([])
+  },
+)

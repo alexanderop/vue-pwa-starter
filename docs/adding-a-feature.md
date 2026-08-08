@@ -54,6 +54,8 @@ For a feature the size of notes, the full set is roughly:
 | arch | nothing to write — the generic rules pick up new features automatically |
 | e2e | only if the feature carries a load-bearing journey (like persistence-across-reload) |
 
+Anything that drives the new screen goes through a page object first — a class in `src/__tests__/pages/` for the browser tiers, and one in `test/e2e/pages/` if the feature reaches e2e. `NotesScreen` and `NotesPage` are the templates; the rules are in [testing-strategy.md](testing-strategy.md).
+
 ## 6. Ship
 
 ```bash
