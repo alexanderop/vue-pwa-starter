@@ -1,0 +1,50 @@
+name: Codecov upload
+description: Upload one tier's coverage and JUnit test results to Codecov under a flag
+
+# Both uploads in one place because they are always wanted together and are
+# pure boilerplate otherwise: four near-identical steps across the two tiers,
+# each with its own chance to drift.
+#
+# Coverage here is informational (see codecov.yml). The test-results upload is
+# the half worth having on its own — it is what turns a test that fails one run
+# in thirty from a shrug into a data point, which the `flaky` tag in
+# vitest.config.ts currently has to be guessed at without.
+
+inputs:
+  flag:
+    description: The Codecov flag identifying this tier (unit, browser, …)
+    required: true
+  token:
+    description: CODECOV_TOKEN
+    required: true
+  coverage-file:
+    description: lcov report to upload
+    required: false
+    default: coverage/lcov.info
+  results-file:
+    description: JUnit XML report to upload
+    required: false
+    default: test-report.junit.xml
+
+runs:
+  using: composite
+  steps:
+    # `disable_search` so the action uploads exactly the file named and does
+    # not go hunting for others — with several tiers writing into coverage/ on
+    # different jobs, a search would silently attribute the wrong report.
+    - name: Upload coverage
+      uses: codecov/codecov-action@e53489f4d376d79066609109e7a95a29eb3740b1 # v7.0.0
+      with:
+        disable_search: true
+        files: ${{ inputs.coverage-file }}
+        flags: ${{ inputs.flag }}
+        token: ${{ inputs.token }}
+
+    - name: Upload test results
+      uses: codecov/codecov-action@e53489f4d376d79066609109e7a95a29eb3740b1 # v7.0.0
+      with:
+        disable_search: true
+        files: ${{ inputs.results-file }}
+        flags: ${{ inputs.flag }}
+        report_type: test_results
+        token: ${{ inputs.token }}
