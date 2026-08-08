@@ -1,3 +1,11 @@
+---
+type: Playbook
+title: Adding a feature
+description: Build order for a new feature, mapped onto the notes worked example, with the test home for every step.
+tags: [features, walkthrough, testing]
+status: stable
+---
+
 # Adding a feature
 
 The notes feature (`src/features/notes`) is the worked example — this walkthrough maps its pieces so you can copy the pattern. Build in this order; every step has a test home.
@@ -49,8 +57,13 @@ For a feature the size of notes, the full set is roughly:
 ## 6. Ship
 
 ```bash
-pnpm lint:check && pnpm format:check && pnpm type-check && pnpm knip
-pnpm test:unit && pnpm test && pnpm test:a11y && pnpm test:arch
+pnpm check                     # lint, format, types, knip, unit + arch tiers — one command, ~8 s
+pnpm test && pnpm test:a11y    # the browser tiers your feature touches
 ```
+
+Then walk the flow yourself in a real browser — capture, reload, confirm the row
+survived — with [agent-browser](agent-browser.md). A green suite says the code is
+right; the walkthrough says the feature is. Anything it turns up gets a test in
+the tier that owns it before you commit.
 
 Commit per behavior — the pre-commit gate (~15 s) keeps you honest. CI runs the full matrix on the PR.

@@ -16,28 +16,34 @@ pnpm dev
 All gates should be green out of the box:
 
 ```bash
-pnpm lint:check && pnpm format:check              # lint + formatting
-pnpm type-check && pnpm knip                      # types + dead code
-pnpm test:unit && pnpm test && pnpm test:a11y     # unit + browser + a11y tiers
-pnpm test:arch && pnpm test:visual                # architecture + visual tiers
+pnpm check                                        # everything below that needs no browser, in parallel (~8 s)
+pnpm test && pnpm test:a11y && pnpm test:visual   # browser + a11y + visual tiers
 pnpm test:e2e                                     # production build in a real browser
+pnpm test:mutation                                # mutation score over the unit tier (~10 s)
 pnpm build && pnpm size-limit                     # bundle budget
 ```
+
+`pnpm check` is the one to reach for while you work: it runs lint, formatting,
+types, dead-code, the unit tier and the architecture tier concurrently, keeps
+going after the first failure, and prints each task's output under its own
+label — so one run tells you everything that is broken.
 
 ## What you get
 
 | Area | What is in the box |
 | --- | --- |
-| App shell | Config-driven bottom nav ([`AppShell.vue`](src/components/AppShell.vue)), optional center FAB slot, `meta.hideNav` escape hatch, safe-area insets, `PageLayout`/`PageHeader`, keyboard-aware bottom sheet (`MobileDialogContent`), toast viewport |
+| App shell | Config-driven bottom nav ([`AppShell.vue`](src/components/AppShell.vue)), optional center FAB slot, `meta.hideNav` escape hatch, safe-area insets, `PageLayout`/`PageHeader`, keyboard-aware bottom sheet (`DialogContent`), toast viewport |
+| UI components | shadcn-vue-style primitives over [Reka UI](https://reka-ui.com/), copied rather than installed — compound parts, `cn()` class merging, `data-slot` targeting, `as-child`. The layer boundary is lint- and test-enforced. See [docs/ui-components.md](docs/ui-components.md) |
 | Local-first data | Dexie schema with a worked v1→v2 migration, converter pattern for reading old data forever, repository layer, zod-validated JSON export/import |
 | Example feature | `src/features/notes` — one deliberately boring feature that touches every layer, with a test in every tier. Copy it, then delete it |
 | Testing | Six tiers: unit (Node, ~100 ms), browser (Vitest browser mode), a11y (axe-core), visual (screenshots), architecture (ArchUnitTS), e2e (playwright-bdd against the production build). See [docs/testing-strategy.md](docs/testing-strategy.md) |
+| Test quality | Stryker mutation testing scoped to the unit tier — grades whether the assertions would notice a bug, not whether the lines ran. Runs in ~10 s, own CI job. See [docs/mutation-testing.md](docs/mutation-testing.md) |
 | Quality gates | oxlint + ESLint + Prettier + markdownlint, knip (dead exports), size-limit (bundle budget), husky pre-commit gate (~15 s) |
 | PWA | vite-plugin-pwa with update prompt, icons generated from one SVG at build time, offline precache, web-vitals seam |
 | Observability | Every db operation is a named Effect span already; opt into OTLP export in development with one env var — no `@opentelemetry/*` dependency, nothing in the production bundle. See [Tracing in development](#tracing-in-development) |
 | CI | Sharded GitHub Actions pipeline, actions pinned by SHA, zizmor-clean |
 | i18n | vue-i18n with typed message keys, English + German |
-| Agent-ready | A `CLAUDE.md`/`AGENTS.md` that teaches coding agents the conventions |
+| Agent-ready | No `CLAUDE.md`, no `AGENTS.md` — [`docs/`](docs/index.md) is an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) bundle of concept files (including a full Effect v4 reference), and a `SessionStart` hook injects its index into every agent session. Humans and agents read the same file |
 
 ## Stack
 
@@ -63,7 +69,7 @@ src/stores/        Shared app-wide state (@effect/atom-vue atoms, not Pinia)
 src/composables/   Shared reactive logic (2+ consumers)
 src/views/         Route-level pages; may compose multiple features
 src/components/    App shell + UI shared across features
-src/components/ui/ Styled primitives (shadcn-style, yours to edit)
+src/components/ui/ Styled primitives (shadcn-style, yours to edit — docs/ui-components.md)
 src/__tests__/     All tests, mirroring the source tree — not colocated
 test/e2e/          playwright-bdd features + steps
 ```
@@ -102,7 +108,7 @@ The notes feature is scaffolding. To remove it:
 2. Remove the notes entries from `src/router/index.ts`, `src/router/navigation.ts`, and the `notes`/`quickAdd` keys from `src/i18n/messages/*`.
 3. Replace the `notes` table in `src/db/schema.ts` (and `repositories/`, `backup.ts`) with your own.
 4. Remove the `QuickAddNoteSheet` wiring from `src/App.vue` (keep the `#center-action` slot if you want a FAB).
-5. Run `pnpm lint:check && pnpm format:check && pnpm type-check && pnpm knip` — the gates will point at anything you missed.
+5. Run `pnpm check` — the gates will point at anything you missed.
 
 ## License
 

@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Caching, memoization, and request dedupe
+description: Per-key TTL caches, memoization, concurrent-lookup dedupe, and request batching with effect/Cache.
+tags: [effect, caching]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/CACHING.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Caching, Memoization, And Request Dedupe
 
 Use this when memoizing expensive lookups, caching per-key results with TTL, deduplicating concurrent identical calls, or considering request batching.

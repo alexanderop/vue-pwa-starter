@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Scheduling and retry
+description: Retries, repeats, polling workers, backoff, jitter, timeouts, and rate-limit-aware policies with Schedule.
+tags: [effect, scheduling, retry]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/SCHEDULING.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Scheduling And Retry
 
 Use this when writing retries, repeats, polling workers, backoff, jitter, rate-limit-aware policies, timeouts, or pass loops.

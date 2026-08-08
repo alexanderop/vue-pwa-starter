@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Streams
+description: Event sources, queues and pubsubs, pagination, backpressure, and long-lived stream consumers.
+tags: [effect, streams, concurrency]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/STREAMS.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Streams
 
 Use this when working with `Stream`, event sources, async iterables, queue/pubsub-backed streams, pagination, backpressure, throttling, debouncing, or long-lived stream consumers.

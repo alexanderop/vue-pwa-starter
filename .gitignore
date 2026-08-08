@@ -17,6 +17,8 @@ test-results
 playwright-report
 .features-gen
 coverage
+.stryker-tmp
+reports
 
 # Editor / OS
 .DS_Store
@@ -27,3 +29,8 @@ coverage
 
 # Logs
 *.log
+
+# Agent config — the committed half is .claude/settings.json and
+# .claude/references.json; these two are per-machine overrides.
+.claude/settings.local.json
+.claude/references.local.json

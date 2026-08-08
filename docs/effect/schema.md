@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Schema and data modeling
+description: Records, field reuse, optionality, brands, variants, and typed errors with effect/Schema.
+tags: [effect, schema, data-modeling, errors]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/SCHEMA.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Schema And Data Modeling
 
 Use this when touching data models, DTOs, row schemas, wire contracts, brands, variants, optional fields, or decoders.

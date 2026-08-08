@@ -1,3 +1,11 @@
+---
+type: Architecture Decision
+title: Local-first
+description: Which Ink & Switch local-first ideals this starter commits to, and how the data layer implements them.
+tags: [local-first, data, indexeddb, rationale]
+status: stable
+---
+
 # Local-first
 
 This starter follows the [Ink & Switch local-first ideals](https://www.inkandswitch.com/local-first/). The ones that shape the code:

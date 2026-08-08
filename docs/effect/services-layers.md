@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Services, layers, and modules
+description: Service tags, module surfaces, layer implementations, runtime wiring, and Effect.fn operation boundaries.
+tags: [effect, services, layers, runtime]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/SERVICES_LAYERS.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Services, Layers, And Modules
 
 Use this when defining service tags, module surfaces, layer implementations, runtime wiring, typed errors, or `Effect.fn` operation boundaries.

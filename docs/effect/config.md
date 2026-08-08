@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Config
+description: Reading runtime configuration through Config recipes and provider layers instead of process.env.
+tags: [effect, config]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/CONFIG.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Config
 
 Use this when reading runtime configuration, env vars, `.env` files, provider-specific settings, or writing `layerConfig(...)` helpers.

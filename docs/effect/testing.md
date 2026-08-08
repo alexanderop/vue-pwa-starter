@@ -1,3 +1,16 @@
+---
+type: Reference
+title: Testing Effect code
+description: it.effect, TestClock, test layers, and deterministic synchronization instead of sleeps.
+tags: [effect, testing]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/TESTING.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # Testing
 
 Use this when writing Effect tests, tests involving time, retry, schedules, concurrency, workers, services, fakes, or config.

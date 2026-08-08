@@ -1,3 +1,16 @@
+---
+type: Reference
+title: HTTP clients
+description: "Outgoing HTTP with Effect HttpClient: adapters, status classification, retries, and rate limiting."
+tags: [effect, http]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/HTTP_CLIENTS.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
+---
+
 # HTTP Clients
 
 Use this when writing outgoing HTTP calls, Effect HttpClient adapters, status classification, HTTP retries, or rate limiting.

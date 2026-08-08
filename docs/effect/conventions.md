@@ -1,39 +1,31 @@
 ---
-name: effect
-description: |
-  Opinionated guide for building production TypeScript applications with Effect v4. Use when implementing Effect workflows, services, layers, schemas, configuration, schedules, caches, streams, HTTP clients, or tests.
-license: MIT
-compatibility: Requires Effect v4. Examples are reviewed against the version documented in this repository.
+type: Convention
+title: Effect v4 conventions
+description: Production defaults for Effect v4 — what to reach for, where boundaries sit, and what never to do.
+tags: [effect, conventions, defaults]
+status: stable
+sources:
+  - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/SKILL.md
+    id: effect-skill
+    title: kitlangton/skills — Effect skill
+    author: kitlangton
 ---
 
-# Effect
+# Effect v4 conventions
 
-Use current Effect v4 APIs and the production defaults in this skill. Established project conventions still take precedence unless the task is explicitly changing them.
+Use current Effect v4 APIs and the production defaults below. Project conventions in the [knowledge index](../index.md) take precedence unless the task is explicitly changing them.
 
-## Source Rule
+## Source rule
 
 Check these before guessing:
 
-- the nearest `AGENTS.md` and any project-local Effect practices doc
-- the project-pinned `effect` package source and version
+- the [knowledge index](../index.md) — injected into every agent session — for where Effect starts and stops in this codebase
+- the project-pinned `effect` package source and version — `~/Projects/opensource/effect` on branch `pinned/4.0.0-beta.105`, starting with its `LLMS.md`, `SCHEMA.md`, and the runnable examples under `ai-docs/src/**`
 - current upstream Effect source when the installed package does not answer the question
 
-## Branch Chooser
+Online docs and v3 training data describe a different API. Do not use them.
 
-Read only the branch references that match the task.
-
-- Data models, schemas, brands, variants, optional keys, or decoders: read `references/SCHEMA.md`.
-- Services, module surfaces, layers, runtime wiring, errors, `Effect.fn`, or test services: read `references/SERVICES_LAYERS.md`.
-- Runtime config, env variables, `ConfigProvider`, or `layerConfig`: read `references/CONFIG.md`.
-- Retry, repeat, polling, backoff, jitter, rate-limit-aware policies, or pass loops: read `references/SCHEDULING.md`.
-- Memoization, per-key TTL caches, deduplicating concurrent lookups, or request batching: read `references/CACHING.md`.
-- Streams, event sources, async iterables, queues/pubsubs, pagination, backpressure, or stream consumers: read `references/STREAMS.md`.
-- Outgoing HTTP calls, Effect HttpClient, status handling, or HTTP rate limiting: read `references/HTTP_CLIENTS.md`.
-- Effect tests, time, sleeps, concurrency synchronization, or fakes: read `references/TESTING.md`.
-
-If a task spans several branches, read all matching files before editing.
-
-## Core Defaults
+## Core defaults
 
 - Compose workflows with `Effect.gen(function* () { ... })`.
 - Define public service methods and non-trivial internal service methods with `Effect.fn("Domain.operation")`.
@@ -49,7 +41,7 @@ If a task spans several branches, read all matching files before editing.
 - Prefer Effect-aware tests, explicit layers, and deterministic synchronization over sleeps.
 - Prefer decoders and `schema.makeEffect(...)` at untrusted boundaries; reserve throwing `schema.make(...)` for trusted construction, and never use casts to skip validation.
 
-## Quick Selection Guide
+## Quick selection guide
 
 - Ordinary object record: `Schema.Struct(...)` plus same-name `interface`.
 - Scalar ID/value object: constrained branded schema.
@@ -75,7 +67,7 @@ If a task spans several branches, read all matching files before editing.
 - Time-sensitive test: `TestClock`, not real sleeping.
 - Concurrent/background test synchronization: `Deferred`, `Queue`, `Latch`, `Ref`, or explicit test hooks.
 
-## Boundary Rules
+## Boundary rules
 
 - Keep HTTP handlers thin: decode input, read context, call services, map typed errors to transport responses.
 - Keep business rules in services or domain functions, not transport handlers.
@@ -86,7 +78,7 @@ If a task spans several branches, read all matching files before editing.
 - Retry only when the operation has proven idempotency.
 - Let exhausted failures remain visible unless the boundary has a real fallback.
 
-## Do Nots
+## Do nots
 
 - Do not use `as any`, non-null assertions, or unchecked casts to silence Effect typing problems.
 - Do not introduce `Schema.Class` or `Schema.TaggedClass` as default app data-modeling patterns.
