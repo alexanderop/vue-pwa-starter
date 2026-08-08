@@ -7,7 +7,6 @@ export default {
   common: {
     buttons: {
       close: 'Close',
-      cancel: 'Cancel',
       save: 'Save',
     },
     aria: {
