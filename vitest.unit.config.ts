@@ -22,5 +22,14 @@ export default defineConfig({
     restoreMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,
+    // Same shape as vitest.config.ts so the two tiers' reports are comparable
+    // when Codecov puts them side by side under their flags. lcov is the one
+    // that matters — it is what the upload reads; the rest is for local use.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html', 'lcov'],
+      include: ['src/**/*.{ts,vue}'],
+      exclude: ['src/**/*.d.ts', 'src/__tests__/**', 'src/components/ui/**'],
+    },
   },
 })

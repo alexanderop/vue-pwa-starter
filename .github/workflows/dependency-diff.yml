@@ -1,0 +1,59 @@
+# What a lockfile change actually costs, on the PR that makes it.
+#
+# `size-limit` in ci.yml guards the bytes that reach a user, which is the
+# number that matters but arrives too late to inform the choice: by then the
+# dependency is in. This reports the other half at review time — what was
+# added, what it drags in transitively, what it weighs installed, and whether
+# a smaller modern replacement exists (e18e's module-replacements data).
+#
+# Split in two on purpose. This half runs with the PR's own code and only
+# `contents: read`; it writes its findings to an artifact and posts nothing.
+# dependency-diff-comment.yml picks the artifact up afterwards and is the only
+# job holding `pull-requests: write`. A single job doing both would need write
+# access while a fork's code is checked out next to it.
+name: dependency-diff
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-diff:
+    name: Dependency diff
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout, and read the base branch to diff against
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # The full history: the action diffs this lockfile against the base.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compare dependencies
+        id: analyze
+        uses: e18e/action-dependency-diff@8e9b8c1957ab066d36235a43f4c1ff1522e1bdbc # v1.6.1
+        with:
+          mode: artifact
+          detect-replacements: 'true'
+          # A starter template has a deliberately small dependency list, so
+          # these are tighter than the action's defaults: anything that adds
+          # ten packages or 150 kB installed is a decision worth surfacing.
+          dependency-threshold: '10'
+          size-threshold: '150000'
+
+      - name: Upload the diff
+        if: steps.analyze.outputs.artifact-path
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-diff
+          path: ${{ steps.analyze.outputs.artifact-path }}

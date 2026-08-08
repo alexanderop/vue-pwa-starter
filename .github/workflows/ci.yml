@@ -35,12 +35,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      # The uploads below are skipped rather than failed when the secret is
+      # absent, so a fork's CI stays green — see the reusable action.
+      HAS_CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN != '' }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm test:unit
+      - run: >
+          pnpm exec vitest run --project=unit --coverage
+          --reporter=default --reporter=junit --outputFile=test-report.junit.xml
+      - name: Upload coverage and test results
+        if: ${{ !cancelled() && env.HAS_CODECOV_TOKEN == 'true' }}
+        uses: ./.github/actions/codecov
+        with:
+          flag: unit
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   mutation:
     name: Mutation score (unit tier)
@@ -85,6 +97,8 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1/2, 2/2]
+    env:
+      HAS_CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN != '' }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -92,9 +106,19 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           playwright: 'true'
-      - run: pnpm exec vitest run --project=default --shard="$SHARD"
+      - run: >
+          pnpm exec vitest run --project=default --shard="$SHARD" --coverage
+          --reporter=default --reporter=junit --outputFile=test-report.junit.xml
         env:
           SHARD: ${{ matrix.shard }}
+      # Both shards upload under the same flag; Codecov merges them. Each runs
+      # on its own runner, so the two reports never collide on disk.
+      - name: Upload coverage and test results
+        if: ${{ !cancelled() && env.HAS_CODECOV_TOKEN == 'true' }}
+        uses: ./.github/actions/codecov
+        with:
+          flag: browser
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload traces on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
