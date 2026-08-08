@@ -10,7 +10,7 @@ const MAX_UNZOOMED_SCALE = 1.05
 /**
  * Tracks the on-screen keyboard height as a `--keyboard-inset` CSS variable
  * on <html>. Bottom sheets position themselves above the keyboard with
- * `bottom: var(--keyboard-inset, 0px)` — see MobileDialogContent.vue.
+ * `bottom: var(--keyboard-inset, 0px)` — see ui/dialog/DialogContent.vue.
  *
  * Call once from App.vue.
  */

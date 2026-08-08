@@ -1,6 +1,6 @@
 /**
  * Architecture tests using ArchUnitTS. These are the codified versions of
- * the conventions in CLAUDE.md:
+ * the conventions in docs/index.md:
  *
  * 1. No circular dependencies inside any layer.
  * 2. Features never import from other features.

@@ -112,3 +112,75 @@ describe('db encapsulation', () => {
     expect(rules).not.toContain(RULE)
   })
 })
+
+/**
+ * The same encapsulation argument as `db`, applied to the UI layer:
+ * `src/components/ui/*` wraps reka-ui in our own primitives, and the rest of
+ * the app talks to the wrappers. See docs/ui-components.md.
+ */
+describe('ui encapsulation', () => {
+  it.each([
+    'src/views/SettingsView.vue',
+    'src/components/AppShell.vue',
+    'src/features/notes/components/NoteCard.vue',
+  ])('rejects %s importing reka-ui directly', async (filePath) => {
+    const rules = await lint(filePath, sfc(`import { DialogRoot } from 'reka-ui'\nvoid DialogRoot`))
+    expect(rules).toContain(RULE)
+  })
+
+  it('rejects cva outside the primitives', async () => {
+    const rules = await lint(
+      'src/features/notes/components/NoteCard.vue',
+      sfc(`import { cva } from 'class-variance-authority'\nvoid cva`),
+    )
+    expect(rules).toContain(RULE)
+  })
+
+  it('rejects reaching past a primitive barrel', async () => {
+    const rules = await lint(
+      'src/views/SettingsView.vue',
+      sfc(`import Button from '@/components/ui/button/Button.vue'\nvoid Button`),
+    )
+    expect(rules).toContain(RULE)
+  })
+
+  it('allows the barrel', async () => {
+    const rules = await lint(
+      'src/views/SettingsView.vue',
+      sfc(`import { Button } from '@/components/ui/button'\nvoid Button`),
+    )
+    expect(rules).not.toContain(RULE)
+  })
+
+  it('lets a primitive use reka-ui and cva — that is what the layer is for', async () => {
+    const rules = await lint(
+      'src/components/ui/dialog/DialogTitle.vue',
+      sfc(`import { DialogTitle } from 'reka-ui'\nvoid DialogTitle`),
+    )
+    expect(rules).not.toContain(RULE)
+  })
+
+  it('keeps a primitive out of the data layer', async () => {
+    const rules = await lint(
+      'src/components/ui/dialog/DialogContent.vue',
+      sfc(`import { listNotes } from '@/db'\nvoid listNotes`),
+    )
+    expect(rules).toContain(RULE)
+  })
+
+  it('keeps a primitive out of app state', async () => {
+    const rules = await lint(
+      'src/components/ui/dialog/DialogContent.vue',
+      sfc(`import { useToastStore } from '@/stores/toast'\nvoid useToastStore`),
+    )
+    expect(rules).toContain(RULE)
+  })
+
+  it('still lets a primitive use a composable', async () => {
+    const rules = await lint(
+      'src/components/ui/dialog/DialogContent.vue',
+      sfc(`import { useTouchDevice } from '@/composables/useTouchDevice'\nvoid useTouchDevice`),
+    )
+    expect(rules).not.toContain(RULE)
+  })
+})

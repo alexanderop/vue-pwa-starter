@@ -67,6 +67,48 @@ const NO_DB_INTERNALS = {
     'The database has one public surface: import from @/db. Add the operation to a repository and re-export it there.',
 }
 
+/**
+ * The UI layer, enforced the same way as the db layer.
+ *
+ * `src/components/ui/*` holds shadcn-style primitives: our components, our
+ * classes, wrapping reka-ui's headless behaviour. reka-ui and cva are the
+ * substrate those wrappers are built from, not an API the app codes against
+ * — an app component reaching for `<DialogContent>` straight from reka-ui
+ * gets no `data-slot`, none of our styling, and no single place to restyle
+ * later. Same reasoning as the db rule above: one public surface per layer.
+ *
+ * See docs/ui-components.md for the pattern these rules protect.
+ */
+const NO_HEADLESS_DIRECT = {
+  group: ['reka-ui', 'reka-ui/**', 'class-variance-authority', 'class-variance-authority/**'],
+  message:
+    'reka-ui and cva are the private substrate of src/components/ui/*. Import the wrapped primitive from its barrel (@/components/ui/<name>) instead, or add the primitive there first — docs/ui-components.md.',
+}
+
+/** Each primitive directory has one door: its index.ts. */
+const NO_UI_INTERNALS = {
+  group: ['**/components/ui/*/*'],
+  message:
+    'Import a primitive from its barrel (@/components/ui/dialog), not from the file inside it — the barrel is what keeps a part swappable.',
+}
+
+/**
+ * We write these components rather than install them. Vendoring the upstream
+ * package back in would put a second, differently-styled Dialog in the app.
+ */
+const NO_SHADCN = {
+  group: ['shadcn-vue', 'shadcn-vue/**', 'radix-vue', 'radix-vue/**'],
+  message:
+    'This project writes its own primitives in the shadcn-vue style rather than depending on it — copy the pattern into src/components/ui/ instead. docs/ui-components.md.',
+}
+
+/** Primitives are presentational: no data layer, no app state, no features. */
+const NO_APP_STATE = {
+  group: ['**/db', '**/db/**', '**/stores/**', ...ANY_FEATURE],
+  message:
+    'A UI primitive stays presentational — no database, no stores, no features. Bind the data in a feature component and pass it in.',
+}
+
 type Boundary = { group: string[]; message: string }
 type RestrictImports = ['error', { patterns: Boundary[] }]
 
@@ -77,29 +119,36 @@ const boundary = (name: string, files: string[], ignores: string[], patterns: Bo
   rules: { 'no-restricted-imports': ['error', { patterns }] as RestrictImports },
 })
 
+/** Applies everywhere outside src/components/ui — see NO_HEADLESS_DIRECT. */
+const CONSUMES_UI = [NO_HEADLESS_DIRECT, NO_UI_INTERNALS, NO_SHADCN]
+
 const boundaries = [
   ...FEATURES.map((feature) =>
     boundary(
       `features/${feature}`,
       [`src/features/${feature}/${SOURCES}`],
       [],
-      [onlyOwnFeature(feature), NO_DB_INTERNALS],
+      [onlyOwnFeature(feature), NO_DB_INTERNALS, ...CONSUMES_UI],
     ),
   ),
 
   // src/db owns its own internals, but must stay ignorant of features.
-  boundary('db', [`src/db/${SOURCES}`], [], [NO_FEATURES]),
+  boundary('db', [`src/db/${SOURCES}`], [], [NO_FEATURES, ...CONSUMES_UI]),
+
+  // The primitives themselves: the one place reka-ui and cva are in scope.
+  boundary('ui-primitives', [`src/components/ui/${SOURCES}`], [], [NO_APP_STATE, NO_SHADCN]),
 
   boundary(
     'shared',
     SHARED_LAYERS.map((folder) => `src/${folder}/${SOURCES}`),
-    [],
-    [NO_FEATURES, NO_DB_INTERNALS],
+    ['src/components/ui/**'],
+    [NO_FEATURES, NO_DB_INTERNALS, ...CONSUMES_UI],
   ),
 
   // Everything else the app ships — views, router, i18n, the shell. These
   // compose features on purpose; the db surface still applies. Tests are
-  // exempt: the migration spec has to talk to the schema directly.
+  // exempt: the migration spec has to talk to the schema directly, and a
+  // component spec may mount a reka-ui part as a bare harness.
   boundary(
     'app',
     [`src/${SOURCES}`],
@@ -109,7 +158,7 @@ const boundaries = [
       'src/db/**',
       ...SHARED_LAYERS.map((folder) => `src/${folder}/**`),
     ],
-    [NO_DB_INTERNALS],
+    [NO_DB_INTERNALS, ...CONSUMES_UI],
   ),
 ]
 

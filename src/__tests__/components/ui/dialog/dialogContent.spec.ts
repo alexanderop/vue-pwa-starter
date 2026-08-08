@@ -2,15 +2,14 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { afterEach, describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
-import MobileDialogContent from '@/components/MobileDialogContent.vue'
-import { DialogDescription, DialogRoot, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { i18n } from '@/i18n'
 
 /** A sheet with more content than a keyboard-shrunk viewport can show. */
 const Harness = defineComponent({
   render: () =>
-    h(DialogRoot, { open: true, modal: false }, () => [
-      h(MobileDialogContent, null, () => [
+    h(Dialog, { open: true, modal: false }, () => [
+      h(DialogContent, null, () => [
         h(DialogTitle, () => 'Tall sheet'),
         h(DialogDescription, () => 'Scroll me'),
         ...Array.from({ length: 30 }, (_, index) => h('p', `line ${index}`)),
@@ -25,7 +24,7 @@ function queryDialogBody(): HTMLElement {
   return body
 }
 
-describe('MobileDialogContent', () => {
+describe('DialogContent', () => {
   let unmount: (() => void) | undefined
 
   afterEach(() => {

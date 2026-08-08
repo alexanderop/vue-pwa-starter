@@ -3,9 +3,14 @@ import { useAtomSet } from '@effect/atom-vue'
 import { Effect } from 'effect'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MobileDialogContent from '@/components/MobileDialogContent.vue'
 import { Button } from '@/components/ui/button'
-import { DialogDescription, DialogRoot, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -94,10 +99,12 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <DialogRoot v-model:open="open">
-    <MobileDialogContent>
-      <DialogTitle>{{ t('notes.form.heading') }}</DialogTitle>
-      <DialogDescription>{{ t('notes.form.description') }}</DialogDescription>
+  <Dialog v-model:open="open">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{{ t('notes.form.heading') }}</DialogTitle>
+        <DialogDescription>{{ t('notes.form.description') }}</DialogDescription>
+      </DialogHeader>
       <form class="flex flex-col gap-4" @submit.prevent="save">
         <div class="flex flex-col gap-2">
           <Label for="note-title">{{ t('notes.form.titleLabel') }}</Label>
@@ -109,6 +116,6 @@ async function save(): Promise<void> {
         </div>
         <Button type="submit" :disabled="!canSave">{{ t('common.buttons.save') }}</Button>
       </form>
-    </MobileDialogContent>
-  </DialogRoot>
+    </DialogContent>
+  </Dialog>
 </template>

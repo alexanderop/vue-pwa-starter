@@ -24,6 +24,8 @@ defineSlots<{
 <template>
   <Primitive
     data-slot="button"
+    :data-variant="props.variant"
+    :data-size="props.size"
     :as="props.as"
     :as-child="props.asChild"
     :class="cn(buttonVariants({ variant: props.variant, size: props.size }), props.class)"

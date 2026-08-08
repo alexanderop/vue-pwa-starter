@@ -127,7 +127,7 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Bottom-sheet enter/exit used by MobileDialogContent on small viewports. */
+/* Bottom-sheet enter/exit used by ui/dialog/DialogContent on small viewports. */
 @keyframes slide-up-mobile {
   from {
     transform: translateY(100%);
