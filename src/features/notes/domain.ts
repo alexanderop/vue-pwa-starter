@@ -27,6 +27,7 @@ const DAY = 24 * HOUR
  * timers involved. A future `updatedAt` (clock skew, imported backup) clamps
  * to "just now" rather than counting negative.
  */
+// Stryker disable next-line StringLiteral: the span name is observability, not behavior — no unit test should assert it
 export const noteAge = Effect.fn('Notes.noteAge')(function* (updatedAt: number) {
   const now = yield* Clock.currentTimeMillis
   const elapsed = Math.max(0, now - updatedAt)

@@ -13,19 +13,38 @@ import { Result, Schema } from 'effect'
  */
 
 /**
+ * Epoch milliseconds — a non-negative safe integer, which is exactly what
+ * `Date.now()` and `Clock.currentTimeMillis` return.
+ *
+ * `Schema.Number` would have been the obvious field type and is the wrong one:
+ * it accepts `NaN` and `±Infinity`. A row with `updatedAt: NaN` decodes
+ * cleanly and then poisons everything downstream — every comparison against
+ * NaN is false, so the note sorts into an arbitrary position, and `noteAge`
+ * renders it as a bucket count of NaN. Since IndexedDB is untrusted input,
+ * "a timestamp is a real point in time" has to be a rule the schema enforces
+ * rather than an assumption its readers make. `Schema.Natural` (safe integer,
+ * ≥ 0) is that rule; no value this app has ever written fails it.
+ */
+const Timestamp = Schema.Natural
+
+/**
  * Current on-disk shape of a note (schema v2). Not exported: `Note` below is
  * the name the rest of the app uses, and `StoredDbNote` is what actually
  * crosses the storage boundary.
  */
+// Emptying these fields is caught, but not by a failing assertion: it makes
+// `DbNote.fields.pinned` undefined, so `Schema.optionalKey` throws while
+// `StoredDbNote` is still being constructed and every test file that imports
+// this module fails to load. Stryker's vitest runner reads the results of the
+// tests it collected, and there are none — see docs/mutation-testing.md.
+// Stryker disable next-line ObjectLiteral: killed at import time, which the runner cannot observe
 const DbNote = Schema.Struct({
   id: Schema.NonEmptyString,
   title: Schema.String,
   body: Schema.String,
   pinned: Schema.Boolean,
-  /** Epoch milliseconds. */
-  createdAt: Schema.Number,
-  /** Epoch milliseconds. */
-  updatedAt: Schema.Number,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
 })
 
 interface DbNote extends Schema.Schema.Type<typeof DbNote> {}
@@ -86,6 +105,7 @@ export function toNote(stored: StoredDbNote): Note {
  * component is a rule only that component obeys, and `Schema.NonEmptyString`
  * alone would happily accept `"   "` as a title.
  */
+// Stryker disable next-line ObjectLiteral: killed at import time via NotePatch's reuse of `.fields`, which the runner cannot observe
 export const NoteDraft = Schema.Struct({
   title: Schema.Trim.check(Schema.isNonEmpty()),
   body: Schema.Trim,

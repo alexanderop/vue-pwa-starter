@@ -101,6 +101,23 @@ describe('noteAge', () => {
     }),
   )
 
+  /**
+   * Every bucket edge belongs to the *larger* unit — 60 minutes is one hour,
+   * not "60 minutes ago". Each boundary needs its exact moment pinned, not a
+   * value from the middle of the bucket: `elapsed < HOUR` and `elapsed <= HOUR`
+   * agree everywhere except at the boundary itself, so a test at 90 minutes
+   * passes under both and says nothing about which one is written.
+   */
+  it.effect('ticks over to hours at exactly 60 minutes', () =>
+    Effect.gen(function* () {
+      const editedAt = yield* Clock.currentTimeMillis
+
+      yield* TestClock.adjust('60 minutes')
+
+      expect(yield* noteAge(editedAt)).toEqual({ unit: 'hours', count: 1 })
+    }),
+  )
+
   it.effect('reports whole hours once minutes run out', () =>
     Effect.gen(function* () {
       const editedAt = yield* Clock.currentTimeMillis
@@ -108,6 +125,16 @@ describe('noteAge', () => {
       yield* TestClock.adjust('90 minutes')
 
       expect(yield* noteAge(editedAt)).toEqual({ unit: 'hours', count: 1 })
+    }),
+  )
+
+  it.effect('ticks over to days at exactly 24 hours', () =>
+    Effect.gen(function* () {
+      const editedAt = yield* Clock.currentTimeMillis
+
+      yield* TestClock.adjust('24 hours')
+
+      expect(yield* noteAge(editedAt)).toEqual({ unit: 'days', count: 1 })
     }),
   )
 

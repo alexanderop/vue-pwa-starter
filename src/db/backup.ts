@@ -51,7 +51,10 @@ export const exportData: Effect.Effect<BackupPayload, DatabaseError, NotesRepo> 
       notes,
     })
   },
-).pipe(Effect.withSpan('Backup.exportData'))
+).pipe(
+  // Stryker disable next-line StringLiteral: the span name is observability, not behavior — no unit test should assert it
+  Effect.withSpan('Backup.exportData'),
+)
 
 /**
  * Validates and imports a backup payload; existing rows with matching ids
@@ -59,6 +62,7 @@ export const exportData: Effect.Effect<BackupPayload, DatabaseError, NotesRepo> 
  * backup file and DatabaseError if the write itself fails — both visible in
  * the type. Returns the number of imported notes.
  */
+// Stryker disable next-line StringLiteral: the span name is observability, not behavior — no unit test should assert it
 export const importData = Effect.fn('Backup.importData')(function* (payload: unknown) {
   const backup = yield* decodeBackup(payload)
   const repo = yield* NotesRepo

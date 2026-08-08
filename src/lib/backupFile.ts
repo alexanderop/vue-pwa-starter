@@ -16,7 +16,14 @@ import { downloadBlob } from './download'
 /** Stem of every exported backup file; the export date is appended. */
 const BACKUP_FILENAME_STEM = 'vue-pwa-starter-backup'
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+/**
+ * The `YYYY-MM-DD` an ISO timestamp opens with, and nothing else.
+ *
+ * The anchor is the whole point: unanchored, this happily finds a date in the
+ * middle of a hand-edited `exportedAt` and puts whatever it found into a
+ * filename.
+ */
+const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/
 
 /** Moving a backup across the browser's file boundary failed. */
 export class BackupFileError extends Schema.TaggedError<BackupFileError>()(
@@ -38,10 +45,15 @@ export class BackupFileError extends Schema.TaggedError<BackupFileError>()(
  * reaches the filename.
  */
 export function backupFilename(exportedAt: string): string {
-  const day = exportedAt.slice(0, 10)
+  const day = ISO_DATE_PREFIX.exec(exportedAt)?.[0]
 
-  return ISO_DATE.test(day) ? `${BACKUP_FILENAME_STEM}-${day}.json` : `${BACKUP_FILENAME_STEM}.json`
+  return day ? `${BACKUP_FILENAME_STEM}-${day}.json` : `${BACKUP_FILENAME_STEM}.json`
 }
+
+// Everything below crosses the browser file boundary (Blob, File, anchor
+// click) and is exercised in the browser tier, not the Node unit tier. Left
+// mutable it would report as uncovered forever — see docs/mutation-testing.md.
+// Stryker disable all
 
 /** Serialize a backup payload and hand it to the browser as a download. */
 export const downloadBackup = (payload: {

@@ -43,6 +43,12 @@ catalogs:
     # Pinned exactly, in lockstep with the `effect` pin in catalog frontend.
     '@effect/vitest': 4.0.0-beta.105
     '@playwright/test': ^1.61.1
+    # Stryker's vitest-runner is developed against the same vitest it finds in
+    # the sandbox — 9.6.x dev-tests against 4.1.10. Move it with the vitest pin.
+    # api is imported only for the config file's JSDoc type.
+    '@stryker-mutator/api': ^9.6.1
+    '@stryker-mutator/core': ^9.6.1
+    '@stryker-mutator/vitest-runner': ^9.6.1
     '@vitest/browser': ^4.1.10
     '@vitest/browser-playwright': ^4.1.10
     '@vitest/coverage-v8': ^4.1.10

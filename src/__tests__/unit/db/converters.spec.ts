@@ -85,6 +85,25 @@ describe('decodeStoredNote', () => {
     }),
   )
 
+  /**
+   * NaN survives every `typeof x === 'number'` check there is, so a timestamp
+   * field typed as a bare number lets one through — and a NaN `updatedAt`
+   * compares false against everything, which puts the note in an arbitrary
+   * place in the list and renders its age as "NaN days ago". The read path is
+   * the only place that can stop it.
+   */
+  it.effect('rejects timestamps that are not a real point in time', () =>
+    Effect.forEach([Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5], (updatedAt) =>
+      Effect.flip(decodeStoredNote({ id: 'a', title: 'x', body: '', createdAt: 1, updatedAt })),
+    ),
+  )
+
+  it.effect('applies the same rule to createdAt', () =>
+    Effect.gen(function* () {
+      yield* Effect.flip(decodeStoredNote({ id: 'a', title: 'x', body: '', createdAt: Number.NaN }))
+    }),
+  )
+
   it.effect('rejects a row that is missing a required field', () =>
     Effect.gen(function* () {
       yield* Effect.flip(decodeStoredNote({ id: 'a', title: 'x', createdAt: 1 }))

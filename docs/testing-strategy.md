@@ -1,3 +1,11 @@
+---
+type: Architecture Decision
+title: Testing strategy
+description: Six test tiers, the rule for which tier a given test belongs in, and when a property earns its place.
+tags: [testing, tiers, ci, property-testing]
+status: stable
+---
+
 # Testing strategy
 
 Six tiers, each answering a different question. The point of the tiers is **placement**: every test has exactly one right home, and the cheap tiers stay fast enough to run constantly.
@@ -31,6 +39,30 @@ Work down this list and stop at the first match:
 - No call-count/order assertions, no reaching into component internals.
 - Every test file resets its own state (`beforeEach(resetAppState)`) — order independence is non-negotiable.
 
+## Properties, and when one earns its place
+
+`it.prop` and `it.effect.prop` (from `@effect/vitest`) run a test body against ~100 generated inputs instead of one hand-picked one. They belong to the **unit tier only** — a property is the same test a hundred times over, which pure logic absorbs in milliseconds and the browser tiers cannot afford.
+
+Reach for one when the thing you want to say is true of *every* input rather than at a boundary, and you can state it without reimplementing the code under test. Three shapes cover most cases:
+
+- **Round-trip** — what one direction emits, the other accepts. `toNote`'s output must decode as a stored row again, because it lands in IndexedDB and in the user's next backup (`src/__tests__/unit/db/converters.spec.ts`).
+- **Invariant** — the operation preserves something. `sortNotes` is a reordering: same notes out as in, plus the ordering rule between every pair of neighbours (`src/__tests__/unit/notes/domain.spec.ts`).
+- **Agreement** — two paths that claim the same rule stay in step. `isNoteDraft` must accept exactly the drafts `decodeNoteDraft` accepts; when they diverge, the form and the write path disagree about what a note is.
+
+Where a schema owns the shape, generate from the schema rather than hand-writing an arbitrary: `Schema.toArbitrary(StoredDbNote)` cannot drift from the validator the repository decodes rows with. That makes the property a test of the schema as well as of the code — which is the point, and worth being ready for.
+
+Keep the examples too. A property pins the *definition* of a behavior; an example pins a specific boundary that must not move, and reads far better when it fails.
+
+**When a property fails, suspect the code before the generator.** `sortNotes` failed roughly one run in four on a generated `updatedAt: Number.NaN`, and the tempting fix — filter NaN out of the generated rows — would have converted a found bug into a hidden one. The generator was right: `Schema.Number` accepts NaN, so the read path accepted it too, and a NaN timestamp compares false against everything, landing the note at an arbitrary place in the list with "NaN days ago" under it. The fix was in `converters.ts` — timestamps are `Schema.Natural` — after which the generator stopped producing the value because the schema stopped allowing it. If a generated input really is impossible, say so in the schema and let the generator follow; narrowing the property is how you lose the read-path hole it just found.
+
+## Grading the tier itself
+
+The tiers answer "does the code work". [Mutation testing](mutation-testing.md)
+answers "would these tests notice if it stopped". `pnpm test:mutation` runs
+Stryker over the unit tier's scope in ~10 s and reports which lines the tests
+execute without asserting on. It is scoped to the unit tier on purpose, and
+reading a survivor has its own procedure — both are in that document.
+
 ## The visual tier and its baselines
 
 Screenshot baselines live in `__screenshots__/` and are **platform-specific** (font rendering differs between macOS and Linux). The tier is a local tool by default and is deliberately not in CI:
@@ -41,7 +73,7 @@ Screenshot baselines live in `__screenshots__/` and are **platform-specific** (f
 ## Where the gates run
 
 - **Every commit** (husky, ~15 s): lint-staged, type-check, `test:unit`, knip.
-- **Before pushing**: `pnpm lint:check` and `pnpm format:check`, plus the tiers your change touches. Formatting on commit only reaches staged files, so `format:check` is the CI gate that catches the rest.
-- **CI on every PR**: everything, with the browser tier sharded (`.github/workflows/ci.yml`).
+- **While working / before pushing** (`pnpm check`, ~8 s): lint, formatting, types, knip, `test:unit` and `test:arch`, run concurrently and reported together — every gate that needs no browser. Then the browser tiers your change touches. Formatting on commit only reaches staged files, so the `format:check` inside `pnpm check` is what catches the rest.
+- **CI on every PR**: everything, with the browser tier sharded, plus the mutation score as its own job (`.github/workflows/ci.yml`).
 
 The principle: the cost of a check should match how often it runs. Fast checks run on every commit; minutes-long tiers are CI's job.
