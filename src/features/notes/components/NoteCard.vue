@@ -32,7 +32,11 @@ const ageLabel = computed(() => {
     <div class="flex items-start gap-1">
       <div class="min-w-0 flex-1">
         <p v-if="note.pinned" class="text-xs font-medium text-primary">{{ t('notes.pinned') }}</p>
-        <h3 class="truncate font-semibold">{{ note.title }}</h3>
+        <!-- h2, not h3: the note list sits directly under the page's h1 with no
+             section heading between them, so h3 would skip a level. axe reports
+             that as `heading-order`, and the a11y tier only sees it when a card
+             is actually on screen — see the `notesHomeWithNote` sweep. -->
+        <h2 class="truncate font-semibold">{{ note.title }}</h2>
         <p
           v-if="note.body"
           class="mt-1 line-clamp-3 text-sm whitespace-pre-line text-muted-foreground"

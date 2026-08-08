@@ -1,6 +1,7 @@
 import { nextTick } from 'vue'
 import { resetInstallPromptState } from '@/composables/useInstallPrompt'
 import { resetLocaleState } from '@/composables/useLocale'
+import { resetPwaUpdateState } from '@/composables/usePwaUpdate'
 import { resetThemeState } from '@/composables/useTheme'
 import { resetDatabase } from '@/db'
 
@@ -20,7 +21,9 @@ import { resetDatabase } from '@/db'
  *
  * useInstallPrompt also holds the deferred `beforeinstallprompt` event, which
  * a spec dispatches by hand — that is module state with no storage behind it
- * at all, and it would otherwise leak a stale prompt into the next test.
+ * at all, and it would otherwise leak a stale prompt into the next test. Same
+ * for usePwaUpdate's `needRefresh`: a spec that raises the update banner would
+ * leave it raised over every later test in the file.
  */
 export async function resetAppState(): Promise<void> {
   await resetDatabase()
@@ -28,6 +31,7 @@ export async function resetAppState(): Promise<void> {
   resetLocaleState()
   resetThemeState()
   resetInstallPromptState()
+  resetPwaUpdateState()
   // useColorMode applies the `.dark` class from a `flush: 'post'` watcher.
   await nextTick()
 }

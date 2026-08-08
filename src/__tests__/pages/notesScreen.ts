@@ -67,7 +67,10 @@ export class NotesScreen extends AppScreen {
 
   /** The list top to bottom. Pinning is about order, so assert the order. */
   readonly expectOrder = vi.defineHelper(async (titles: ReadonlyArray<string>): Promise<void> => {
-    const headings = page.getByRole('heading', { level: 3 })
+    // Scoped to the list rather than matching every level-2 heading on the
+    // page: a card's title is an h2 (it sits under the view's h1), and so are
+    // the empty state's and every settings section's.
+    const headings = page.getByRole('list').getByRole('heading', { level: 2 })
     await expect
       .poll(async () =>
         (await headings.all()).map((heading) => heading.element().textContent?.trim()),

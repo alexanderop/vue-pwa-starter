@@ -84,7 +84,14 @@
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.65 0.22 290);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Near-black, not the near-white of the light theme — dark mode lightens
+     --primary so it stays legible as `text-primary` on a dark surface, and at
+     that lightness white text on it is only 3.4:1. The two demands cannot be
+     met by one pair: whatever makes the accent readable *as text* on dark also
+     makes it too bright to carry white text. Flipping the foreground is how
+     shadcn's own dark palettes resolve it. Only ever paired with bg-primary
+     (the FAB in App.vue, the default Button), so nothing else is affected. */
+  --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
