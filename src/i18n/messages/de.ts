@@ -9,7 +9,6 @@ const de: MessageSchema = {
   common: {
     buttons: {
       close: 'Schließen',
-      cancel: 'Abbrechen',
       save: 'Speichern',
     },
     aria: {
