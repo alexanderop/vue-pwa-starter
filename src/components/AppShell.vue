@@ -46,7 +46,7 @@ function navigate(routeName: string): void {
 
 <template>
   <div class="flex h-dvh flex-col bg-background">
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 overflow-y-auto overscroll-contain">
       <slot />
     </main>
 

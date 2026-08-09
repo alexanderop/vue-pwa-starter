@@ -129,9 +129,14 @@
 
 /* Padding for elements pinned to the bottom edge, so they clear the home
    indicator on notched phones in standalone PWA mode. Requires
-   viewport-fit=cover in index.html. */
+   viewport-fit=cover in index.html.
+
+   Clamped, not raw: every inset is 0 on flat-bottomed hardware, so a bare
+   env() ships a layout nobody tested. `--safe-bottom-min` is the floor the
+   call site wants; the utility is the only thing writing padding-bottom, so
+   there is no second declaration to lose an ordering race to. */
 @utility safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: max(var(--safe-bottom-min, 0px), env(safe-area-inset-bottom));
 }
 
 /* Bottom-sheet enter/exit used by ui/dialog/DialogContent on small viewports. */

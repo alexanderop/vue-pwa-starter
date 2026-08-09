@@ -66,12 +66,18 @@ function handleOpenAutoFocus(event: Event): void {
 <template>
   <DialogPortal>
     <DialogOverlay />
+    <!-- No `pb-6` beside `safe-area-bottom`: two utilities declaring
+         padding-bottom at equal specificity hand the decision to generated
+         stylesheet order, and the one that was winning resolves to 0px on any
+         phone without a home indicator. The floor goes into the utility's
+         `--safe-bottom-min` instead, so a single declaration wins by
+         construction. -->
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
-          'bg-background fixed bottom-[var(--keyboard-inset,0px)] left-0 right-0 z-50 flex w-full flex-col gap-4 overflow-hidden rounded-t-2xl border pt-2 px-4 pb-6 shadow-lg safe-area-bottom',
+          'bg-background fixed bottom-[var(--keyboard-inset,0px)] left-0 right-0 z-50 flex w-full flex-col gap-4 overflow-hidden rounded-t-2xl border pt-2 px-4 shadow-lg safe-area-bottom [--safe-bottom-min:1.5rem]',
           'max-h-[calc(100dvh-var(--keyboard-inset,0px))]',
           'data-[state=open]:animate-slide-up-mobile data-[state=closed]:animate-slide-down-mobile',
           'sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:duration-200',
@@ -99,8 +105,12 @@ function handleOpenAutoFocus(event: Event): void {
       </div>
 
       <!-- Close button (desktop only) — on mobile the sheet is dismissed by
-           tapping the overlay or swiping, and the corner target competes with
-           the drag handle. -->
+           tapping the overlay, and the corner target competes with the drag
+           handle. The handle above is a visual grip, not a gesture: reka-ui
+           ships a Drawer (DrawerHandle, DrawerSwipeArea, velocity dismissal)
+           that would wire it for real, and migrating to it is an API change
+           rather than a CSS one. Until then this comment does not promise a
+           swipe the sheet does not honor. -->
       <DialogClose
         v-if="showCloseButton"
         data-slot="dialog-close"
