@@ -209,6 +209,10 @@ covers file shape, which ESLint cannot see:
   and a primitive that accepts `class` actually uses it;
 - a primitive declares **at most three configuration props beyond `class`**.
 
+`touchConventions.test.ts` covers the other half of the contract — that a
+control answers a touch, and that nothing writes an unclamped inset. See
+[Answering a touch](#answering-a-touch) below.
+
 That last one is the flag-sprawl tripwire. Props forwarded from a reka type
 (`DialogContentProps & { … }`) are not counted — only the ones the component
 invents.
@@ -216,6 +220,42 @@ invents.
 Both suites also assert the rules reject deliberate violations
 (`boundaries.test.ts`, and the closing block of `uiPrimitives.test.ts`); a rule
 that has only ever seen passing input is not a rule.
+
+## Answering a touch
+
+Part of the primitive contract, not decoration on top of it. Mobile-first is
+the product, so a primitive that only responds to a mouse is incomplete in the
+same way one without a `data-slot` is.
+
+The button base is the worked example, and the shape every interactive
+primitive copies:
+
+```ts
+// base — the press state lives here, not in a variant
+'select-none touch-manipulation transition-[color,background-color,box-shadow,transform] duration-100 active:scale-[0.97] …'
+
+// sizes — touch-first, collapsed for a fine pointer
+size: {
+  default: 'h-touch-target px-4 py-2 pointer-fine:h-10',
+  icon: 'size-touch-target pointer-fine:size-10',
+}
+```
+
+Two things to internalise before adding a variant:
+
+- **A `hover:` is not feedback on a phone.** Tailwind v4 gates every `hover:`
+  behind `@media (hover: hover)`, so on a touch device the variant styles above
+  never fire and the control answers a tap with nothing. `active:` is what
+  answers; `hover:` is the mouse's extra.
+- **The floor is the default, the collapse is the exception.** Written the
+  other way round, the untested default is the phone one — and the phone is
+  what this app is for.
+
+`src/__tests__/architecture/touchConventions.test.ts` fails the build for a
+control with a `hover:` and no `active:`, and for the button base losing either
+its press state or `touch-manipulation`. The reasoning, and the three
+conventions that live outside this layer:
+[touch-conventions.md](touch-conventions.md).
 
 ## Adding a primitive
 
@@ -312,8 +352,11 @@ upstream file:
 - **Strings come from i18n.** Upstream hard-codes `"Close"`; this project
   requires every user-facing string in `src/i18n/messages/*`, so
   `DialogContent` uses `useI18n()`.
-- **Touch-target sizing.** Sizes resolve `--spacing-touch-target` rather than
-  upstream's tighter desktop heights.
+- **Touch-target sizing, and a press state on the base.** Sizes resolve
+  `--spacing-touch-target` and collapse to upstream's tighter heights only
+  under `pointer-fine:`; the base carries `active:scale-[0.97]`,
+  `touch-manipulation` and `select-none`, which upstream leaves to the
+  consumer. See [Answering a touch](#answering-a-touch).
 
 ## Reading the real source
 

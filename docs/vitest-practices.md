@@ -172,6 +172,38 @@ failure mode the dialog primitive exists to prevent. `QuickAddSheet.expectReady`
 uses it too, so the wait that gates every quick-add interaction means *usable*
 rather than merely *rendered*.
 
+## Geometry assertions measure what a user perceives
+
+**Rule: when the claim is about layout, measure the distance a user sees —
+never assert the declaration that produces it.**
+
+```ts
+// The sheet's last control must clear its bottom edge.
+const gap = sheet.getBoundingClientRect().bottom - submit.element().getBoundingClientRect().bottom
+expect(gap).toBeGreaterThanOrEqual(24)
+```
+
+Not `getComputedStyle(sheet).paddingBottom === '24px'`, and certainly not
+`toHaveClass('pb-6')`. The measured form survives someone swapping the padding
+for a spacer element, and it fails for the reason a user would notice. The
+class-string form goes red on a harmless rename and stays green when the CSS is
+broken — a change detector aimed at the wrong thing, and
+[testing-strategy.md](testing-strategy.md) rules it out on those grounds.
+
+`getComputedStyle` is still the right tool when the *property itself* is the
+subject and there is no perceivable proxy in a headless browser —
+`overscrollBehaviorY` is one, since chaining needs a real gesture. Two things
+keep that honest:
+
+- **Ask the DOM which elements to grade, do not name them.** The overscroll
+  bug was a correct declaration on an element that never scrolls, so a test
+  naming `<main>` would have missed the next instance. Collect the elements
+  whose computed `overflow-y` is `auto` or `scroll`, then hold *those* to the
+  rule.
+- **Assert the collection is non-empty first.** A sweep that finds nothing
+  passes, which is the `a11yCoverage` lesson: a green check means nothing until
+  you know it would go red.
+
 ## Retries are narrow, and tagged
 
 The browser projects retry on CI only, and only for errors that are the
