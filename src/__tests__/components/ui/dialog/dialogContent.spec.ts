@@ -44,6 +44,11 @@ const it = base.extend('tallSheet', async ({}, { onCleanup }) => {
       if (!(body instanceof HTMLElement)) throw new Error('dialog body not found')
       return body
     },
+    get sheet(): HTMLElement {
+      const sheet = document.querySelector('[data-slot="dialog-content"]')
+      if (!(sheet instanceof HTMLElement)) throw new Error('dialog content not found')
+      return sheet
+    },
     submit: page.getByRole('button', { name: 'Save' }),
   }
 })
@@ -66,5 +71,31 @@ describe('DialogContent', () => {
     // scroll region it would be clipped by the sheet and unreachable.
     body.scrollTop = body.scrollHeight
     await expect.element(submit).toBeInViewport()
+  })
+
+  /**
+   * The gap a user perceives, not the property that produces it — so this
+   * survives someone swapping the padding for a spacer element, and it names
+   * the bug rather than the declaration (docs/testing-strategy.md forbids
+   * asserting on class strings).
+   */
+  it('keeps its last control clear of the bottom edge with no home indicator', async ({
+    tallSheet,
+  }) => {
+    const { body, sheet, submit } = tallSheet
+
+    body.scrollTop = body.scrollHeight
+    await expect.element(submit).toBeInViewport()
+
+    // env(safe-area-inset-bottom) is 0 in this browser, exactly as on a
+    // flat-bottomed phone — which is the case the clamp exists for. A bare
+    // env() here collapses the sheet's padding to nothing.
+    const gap =
+      sheet.getBoundingClientRect().bottom - submit.element().getBoundingClientRect().bottom
+
+    expect(
+      gap,
+      "the sheet's last control is flush against its bottom edge — safe-area-bottom is writing a bare env(), which resolves to 0px on hardware with no home indicator",
+    ).toBeGreaterThanOrEqual(24)
   })
 })
