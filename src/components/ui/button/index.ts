@@ -9,9 +9,16 @@ export { default as Button } from './Button.vue'
  * below never fire at all and a press used to produce nothing.
  *
  * Three things ride along with the press transform, and none are optional:
- * `transition-colors` cannot animate a transform, so the property list widens;
+ * `transition-colors` cannot animate the press, so the property list widens;
  * `touch-manipulation` drops the ~300ms double-tap-zoom wait; `select-none`
  * stops a long-press turning a button label into a text selection.
+ *
+ * The list names `scale`, **not** `transform`. Tailwind v4 compiles
+ * `scale-[0.97]` to the standalone `scale` property rather than to a
+ * `transform: scale(…)`, so a list naming `transform` animates a property
+ * that never changes and the press snaps. (`transition-transform` would work
+ * — it expands to `transform, translate, scale, rotate` — but an explicit
+ * list has to say `scale` itself.) Verified in a browser, not reasoned about.
  *
  * Sizing is written **touch-first and collapsed for a fine pointer**, so the
  * 44px floor is the default and shrinking is the exception a mouse opts into.
@@ -19,7 +26,7 @@ export { default as Button } from './Button.vue'
  * `@custom-variant`. See docs/touch-conventions.md.
  */
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium select-none touch-manipulation transition-[color,background-color,box-shadow,transform] duration-100 active:scale-[0.97] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium select-none touch-manipulation transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.97] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {

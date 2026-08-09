@@ -75,7 +75,7 @@ function navigate(routeName: string): void {
           v-for="item in leftItems"
           :key="item.routeName"
           type="button"
-          class="flex min-h-touch-target flex-1 flex-col items-center justify-center px-2 py-3 select-none touch-manipulation transition-[color,transform] duration-100 active:scale-90"
+          class="flex min-h-touch-target flex-1 flex-col items-center justify-center px-2 py-3 select-none touch-manipulation transition-[color,scale] duration-100 active:scale-90"
           :class="
             isActive(item.routeName)
               ? 'border-t-2 border-primary text-primary'
@@ -94,7 +94,7 @@ function navigate(routeName: string): void {
           v-for="item in rightItems"
           :key="item.routeName"
           type="button"
-          class="flex min-h-touch-target flex-1 flex-col items-center justify-center px-2 py-3 select-none touch-manipulation transition-[color,transform] duration-100 active:scale-90"
+          class="flex min-h-touch-target flex-1 flex-col items-center justify-center px-2 py-3 select-none touch-manipulation transition-[color,scale] duration-100 active:scale-90"
           :class="
             isActive(item.routeName)
               ? 'border-t-2 border-primary text-primary'

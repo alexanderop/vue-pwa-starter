@@ -199,6 +199,32 @@ export function paddingRacesTheInset(source: string): boolean {
 }
 
 /**
+ * A press state that cannot animate, because the transition names a property
+ * that never changes.
+ *
+ * Tailwind v4 compiles `scale-90` to the standalone `scale` property, not to
+ * `transform: scale(…)`. So `transition-[color,transform] active:scale-90`
+ * transitions `transform` — which stays `none` throughout — and the press
+ * snaps. The shorthand `transition-transform` is fine (it expands to
+ * `transform, translate, scale, rotate`); an explicit bracket list has to say
+ * `scale` itself.
+ *
+ * Found by driving a real browser, not by reading the CSS: both the computed
+ * `transition-property` and the `active:` class were present and correct, and
+ * only `getComputedStyle(el).scale` while the pointer was held showed that the
+ * two never met.
+ */
+export function unanimatedPressStates(source: string): Array<string> {
+  return quotedStrings(stripComments(source)).filter((text) => {
+    if (!text.includes('active:scale-')) return false
+    if (/transition-(?:transform|all)\b/.test(text)) return false
+
+    const list = /transition-\[([^\]]*)\]/.exec(text)
+    return list === null || !list[1].includes('scale')
+  })
+}
+
+/**
  * Controls whose hover-only styling is deliberate, each with its reason —
  * the `A11Y_SKIPPED` idiom. An exemption with no justification is a hole with
  * a comment shape. Empty today, and kept so the next one has a home that
@@ -294,6 +320,19 @@ describe('new controls cannot ship hover-only', () => {
     )
   })
 
+  it('every press state can actually animate', () => {
+    const offenders = FILES.flatMap((file) =>
+      unanimatedPressStates(file.source).map((text) => `${file.id}: "${text.slice(0, 90)}…"`),
+    )
+
+    expect(
+      offenders,
+      `Tailwind v4 compiles scale-* to the standalone \`scale\` property, not to a transform.\n` +
+        `A transition list naming \`transform\` animates something that never changes, so the\n` +
+        `press snaps instead of easing. Name \`scale\` in the list, or use transition-transform:\n${list(offenders)}`,
+    ).toEqual([])
+  })
+
   it('the button base answers a press', () => {
     // The primitive every feature reaches for, and the one place a missing
     // active: would be invisible above — its variants live in a .ts table,
@@ -366,6 +405,18 @@ describe('the checks reject a tree written the wrong way', () => {
       paddingRacesTheInset(`<!-- No \`pb-6\` beside \`safe-area-bottom\`: they race. -->
   <div class="px-4 safe-area-bottom [--safe-bottom-min:1.5rem]" />`),
     ).toBe(false)
+  })
+
+  it('finds a press state the transition list cannot animate', () => {
+    // The exact string this file shipped before a browser walk caught it.
+    expect(unanimatedPressStates(`class="transition-[color,transform] active:scale-90"`)).toEqual([
+      'transition-[color,transform] active:scale-90',
+    ])
+    expect(unanimatedPressStates(`class="transition-[color,scale] active:scale-90"`)).toEqual([])
+    // The shorthand expands to transform, translate, scale, rotate.
+    expect(unanimatedPressStates(`class="transition-transform active:scale-95"`)).toEqual([])
+    // A press state with no transition at all snaps just as hard.
+    expect(unanimatedPressStates(`class="active:scale-95"`)).toEqual(['active:scale-95'])
   })
 
   it('finds a control that ships hover-only', () => {
