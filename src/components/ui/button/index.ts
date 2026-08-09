@@ -3,8 +3,23 @@ import { cva } from 'class-variance-authority'
 
 export { default as Button } from './Button.vue'
 
+/**
+ * The base answers a tap, which `hover:` cannot: Tailwind v4 gates every
+ * `hover:` behind `@media (hover: hover)`, so on a phone the variant styles
+ * below never fire at all and a press used to produce nothing.
+ *
+ * Three things ride along with the press transform, and none are optional:
+ * `transition-colors` cannot animate a transform, so the property list widens;
+ * `touch-manipulation` drops the ~300ms double-tap-zoom wait; `select-none`
+ * stops a long-press turning a button label into a text selection.
+ *
+ * Sizing is written **touch-first and collapsed for a fine pointer**, so the
+ * 44px floor is the default and shrinking is the exception a mouse opts into.
+ * `pointer-fine:` compiles natively in Tailwind 4 — no config, no
+ * `@custom-variant`. See docs/touch-conventions.md.
+ */
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium select-none touch-manipulation transition-[color,background-color,box-shadow,transform] duration-100 active:scale-[0.97] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -15,10 +30,10 @@ export const buttonVariants = cva(
         destructive: 'bg-destructive text-white shadow-xs hover:bg-destructive/90',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-6',
-        icon: 'size-touch-target',
+        default: 'h-touch-target px-4 py-2 pointer-fine:h-10',
+        sm: 'h-10 rounded-md px-3 pointer-fine:h-9',
+        lg: 'h-12 rounded-md px-6 pointer-fine:h-11',
+        icon: 'size-touch-target pointer-fine:size-10',
       },
     },
     defaultVariants: {

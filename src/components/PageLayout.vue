@@ -43,7 +43,13 @@ defineSlots<{
       </template>
     </PageHeader>
 
-    <div class="flex-1" :class="scrollable ? 'overflow-y-auto' : 'overflow-hidden'">
+    <!-- `overscroll-contain` for the same reason <main> has it: this is a real
+         scroller nested inside another one, so without it reaching the end of
+         a settings list chains the gesture out to the shell. -->
+    <div
+      class="flex-1"
+      :class="scrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'"
+    >
       <slot />
     </div>
 

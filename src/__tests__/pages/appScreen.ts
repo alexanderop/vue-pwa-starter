@@ -72,6 +72,11 @@ export abstract class AppScreen {
     return page.getByRole('navigation')
   }
 
+  /** One tab, by the label a user reads on it. */
+  tab(label: string): Locator {
+    return this.tabBar.getByRole('button', { name: label })
+  }
+
   /**
    * Toasts render in a viewport outside the screen's own markup, so they are
    * queried from the page rather than from `container`.

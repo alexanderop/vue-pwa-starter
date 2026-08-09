@@ -23,6 +23,19 @@ export class NotesScreen extends AppScreen {
     return page.getByRole('heading', { name: title })
   }
 
+  /** The route's own h1. Chrome, and nothing local suppresses selection on it. */
+  get heading(): Locator {
+    return page.getByRole('heading', { name: 'Notes', level: 1 })
+  }
+
+  /**
+   * The prose a user wrote on a card — the one thing on this screen that is
+   * not chrome, and so the one thing that stays selectable.
+   */
+  noteBody(body: string): Locator {
+    return page.getByText(body, { exact: true })
+  }
+
   get emptyState(): Locator {
     return page.getByText('No notes yet')
   }

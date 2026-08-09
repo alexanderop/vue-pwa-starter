@@ -36,10 +36,13 @@ const ageLabel = computed(() => {
              section heading between them, so h3 would skip a level. axe reports
              that as `heading-order`, and the a11y tier only sees it when a card
              is actually on screen — see the `notesHomeWithNote` sweep. -->
-        <h2 class="truncate font-semibold">{{ note.title }}</h2>
+        <!-- `select-text` on both: the body carries the app's global
+             `user-select: none` (src/style.css), which is right for chrome and
+             wrong for the one thing on this card the user wrote themselves. -->
+        <h2 class="truncate font-semibold select-text">{{ note.title }}</h2>
         <p
           v-if="note.body"
-          class="mt-1 line-clamp-3 text-sm whitespace-pre-line text-muted-foreground"
+          class="mt-1 line-clamp-3 text-sm whitespace-pre-line text-muted-foreground select-text"
         >
           {{ note.body }}
         </p>

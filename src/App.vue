@@ -42,9 +42,12 @@ const navItems = computed<Array<NavItem>>(() =>
       <RouterView />
 
       <template #center-action>
+        <!-- The outer button, not the inner span, is the hit target — so the
+             double-tap-zoom suppression belongs here even though the visible
+             press transform is on the span. -->
         <button
           type="button"
-          class="flex flex-1 flex-col items-center justify-center px-2 py-2"
+          class="flex flex-1 flex-col items-center justify-center px-2 py-2 select-none touch-manipulation"
           :aria-label="t('quickAdd.open')"
           @click="quickAdd.open()"
         >
