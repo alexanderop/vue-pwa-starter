@@ -120,10 +120,37 @@ export default defineConfig({
           exclude: [
             ...sharedTestConfig.exclude,
             'src/__tests__/a11y/**',
+            'src/__tests__/touch/**',
             'src/__tests__/visual/**',
             'src/__tests__/unit/**',
           ],
           browser: browserConfig('default-browser'),
+        },
+      },
+
+      // Touch: the same specs' browser, emulating a phone. This is the only
+      // tier where `pointer: coarse` and `hover: none` match — every other
+      // browser project launches a stock desktop Chromium, so a control that
+      // is only reachable with a mouse looks correct in all of them.
+      // `matchMedia` is read-only from inside the page, so the condition has
+      // to come from the browser context rather than from a spec.
+      {
+        plugins,
+        resolve,
+        optimizeDeps: optimizeDependencies,
+        test: {
+          ...sharedTestConfig,
+          name: 'touch',
+          include: ['src/__tests__/touch/**/*.spec.ts'],
+          browser: {
+            ...browserConfig('touch-browser'),
+            // `hasTouch` alone gives the page touch events; `isMobile` is
+            // what flips Chromium's primary pointer to coarse. Both, or the
+            // tier is a desktop run with a touch API bolted on.
+            provider: playwright({
+              contextOptions: { hasTouch: true, isMobile: true },
+            }),
+          },
         },
       },
 

@@ -1,14 +1,14 @@
 ---
 type: Architecture Decision
 title: Testing strategy
-description: Six test tiers, the rule for which tier a given test belongs in, and when a property earns its place.
+description: Seven test tiers, the rule for which tier a given test belongs in, and when a property earns its place.
 tags: [testing, tiers, ci, property-testing]
 status: stable
 ---
 
 # Testing strategy
 
-Six tiers, each answering a different question. The point of the tiers is **placement**: every test has exactly one right home, and the cheap tiers stay fast enough to run constantly.
+Seven tiers, each answering a different question. The point of the tiers is **placement**: every test has exactly one right home, and the cheap tiers stay fast enough to run constantly.
 
 ## The tiers
 
@@ -17,13 +17,14 @@ Six tiers, each answering a different question. The point of the tiers is **plac
 | unit    | `pnpm test:unit`   | Node, ~100 ms                               | Is the pure logic right?                                             |
 | default | `pnpm test`        | Real Chromium (Vitest browser mode)         | Do components and features behave, wired together?                   |
 | a11y    | `pnpm test:a11y`   | Real Chromium + axe-core, light and dark    | Are rendered screens accessible, and is their structure still there? |
+| touch   | `pnpm test:touch`  | Real Chromium under **touch emulation**     | Does the app work the way a phone experiences it?                    |
 | visual  | `pnpm test:visual` | Real Chromium screenshots                   | Did the UI change when I didn't mean it to?                          |
 | arch    | `pnpm test:arch`   | Node + ArchUnitTS/ESLint                    | Are the layer boundaries intact, and does the enforcement fire?      |
 | e2e     | `pnpm test:e2e`    | Playwright against the **production build** | Does the shipped artifact work end to end?                           |
 
 ## One driver, two runners
 
-Three of those rows say "real Chromium" and the fourth says Playwright, and all four mean the same binary. `vitest.config.ts` sets `provider: playwright()` (`@vitest/browser-playwright`), so the browser tiers drive Playwright's Chromium too — Vitest browser mode ships no automation of its own, it picks a provider. e2e differs by running under `@playwright/test` (a `Pixel 7` profile, still Chromium) rather than under Vitest. There is one automation library in this repo, not two.
+Four of those rows say "real Chromium" and the last says Playwright, and all five mean the same binary. `vitest.config.ts` sets `provider: playwright()` (`@vitest/browser-playwright`), so the browser tiers drive Playwright's Chromium too — Vitest browser mode ships no automation of its own, it picks a provider. e2e differs by running under `@playwright/test` (a `Pixel 7` profile, still Chromium) rather than under Vitest. There is one automation library in this repo, not two.
 
 What actually differs is **where the test code runs**, and that explains more of the rules below than the API difference does:
 
@@ -43,13 +44,22 @@ Work down this list and stop at the first match:
    - **Every sweep runs in both themes.** `color-contrast` is the rule this tier reports most, and the only one whose answer depends on which palette is live — a light-only run grades half the app, and dark is the half nobody looks at by accident. The sweeps are a `describe.each` over `['light', 'dark']`; the structure sweeps are not repeated, since landmarks do not change colour. Switching theme is `await theme.dark()`, and the `await` is load-bearing: the tab bar carries `transition-colors`, so for ~150 ms every colour on screen is a blend of the two themes. The fixture waits the transitions out — without that, axe grades a frame no user ever sees, differently each run.
    - **A component only gets swept if some sweep renders it**, and the default screen sweeps render the empty state of everything. A note card, a toast, an install banner, the update banner: none of them are on screen unless a sweep puts them there. `src/__tests__/a11y/coverage.ts` is the ledger — every component names the sweep that renders it, or names why it is not swept — and `architecture/a11yCoverage.test.ts` fails when a component is in neither, when an entry is stale, or when a declared sweep is one no spec runs. Adding a component is therefore a decision about its a11y coverage, not a silent omission. It found `heading-order` in `NoteCard` the day it was written.
 
-4. **Asserting nothing changed visually?** → `visual` (`src/__tests__/visual/`).
-5. **Asserting a project-wide rule — an import boundary, or that another tier is doing its job?** → `arch` (`src/__tests__/architecture/`). It runs in Node over the whole source tree, which is what the files here have in common. Four things live there:
+4. **Does the claim only hold under a coarse pointer?** → `touch` (`src/__tests__/touch/`). Every other browser project launches a stock desktop Chromium, where `hover: hover` and `pointer: fine` match — so a mobile-first app whose stated product is the app shell had no tier that experienced it the way its users do, and that is how a batch of touch conventions rotted unnoticed. This tier's project passes `contextOptions: { hasTouch: true, isMobile: true }` to the Playwright provider; `hasTouch` gives the page touch events, `isMobile` is what flips Chromium's primary pointer to coarse, and both are needed. `matchMedia` is read-only from inside the page, which is why the condition is a project rather than a stub in a spec.
+
+   Two things follow from that:
+
+   - **Every spec here asserts the tier is real first.** `expect(matchMedia('(pointer: coarse)').matches).toBe(true)` is the opening assertion in `touchTargets.spec.ts` — without it the whole tier is a second desktop run that passes while grading the collapsed `pointer-fine:` sizes.
+   - **It is not the a11y tier's job.** Axe's `target-size` rule uses the WCAG 2.2 AA floor of 24×24; ours is the 44px HIG one. A 40px button satisfies axe and fails us.
+
+   The e2e tier also drives a `Pixel 7` profile, which is a coarse pointer too — but it proves user journeys against the production build and costs a build to run. A convention about the chrome belongs here.
+
+5. **Asserting nothing changed visually?** → `visual` (`src/__tests__/visual/`).
+6. **Asserting a project-wide rule — an import boundary, or that another tier is doing its job?** → `arch` (`src/__tests__/architecture/`). It runs in Node over the whole source tree, which is what the files here have in common. Four things live there:
    - ArchUnitTS rules over the real module graph.
    - `boundaries.test.ts`, which feeds ESLint deliberate violations. It exists because ArchUnitTS does not parse `.vue` files and because "the codebase has no violations" also passes when nothing is being enforced — the actual `.vue` coverage comes from `no-restricted-imports` in `eslint.config.ts`.
    - `uiPrimitives.test.ts`, the file-shape rules for `src/components/ui/` ([ui-components.md](ui-components.md)).
    - `a11yCoverage.test.ts` and `i18nKeys.test.ts`, which are **tests about the tests and the catalogue**. Both answer a question their own subject cannot: the a11y tier cannot tell you which screens it forgot, and the type system cannot see a message key that nothing reads or one assembled at runtime. That is the same reasoning as `boundaries.test.ts` — a green check means nothing until you know it would go red.
-6. **Proving a user journey against what actually ships (service worker, real IndexedDB, production bundle)?** → e2e (`test/e2e/`, Gherkin + playwright-bdd). Keep these few and load-bearing — the offline-reload scenario is the canonical example: it cuts the network before reloading, so it fails unless the service worker precached the shell.
+7. **Proving a user journey against what actually ships (service worker, real IndexedDB, production bundle)?** → e2e (`test/e2e/`, Gherkin + playwright-bdd). Keep these few and load-bearing — the offline-reload scenario is the canonical example: it cuts the network before reloading, so it fails unless the service worker precached the shell.
 
 ## Test quality bar
 
@@ -113,7 +123,7 @@ Screenshot baselines live in `__screenshots__/` and are **platform-specific** (f
 
 - **Every commit** (husky, ~15 s): lint-staged, type-check, `test:unit`, knip.
 - **While working / before pushing** (`pnpm check`, ~8 s): lint, formatting, types, knip, `test:unit` and `test:arch`, run concurrently and reported together — every gate that needs no browser. Then the browser tiers your change touches. Formatting on commit only reaches staged files, so the `format:check` inside `pnpm check` is what catches the rest.
-- **CI on every PR** (`.github/workflows/`): everything, with the browser tier sharded, plus the mutation score as its own job. Alongside `ci.yml`:
+- **CI on every PR** (`.github/workflows/`): everything, with the browser tier sharded, plus the mutation score and the touch tier as their own jobs. Alongside `ci.yml`:
   - `autofix.yml` — runs the `--fix` variants and pushes the result back via autofix.ci, so the mechanical half of a red build becomes a commit instead of an errand. `lint:check` and `format:check` still run in `ci.yml` and still fail on whatever `--fix` cannot repair.
   - `zizmor.yml` — static analysis of the workflows themselves, pedantic persona. The repo pins every action to a SHA and sets least-privilege `permissions` by hand; this is what keeps that true. The `harden-github-actions` skill runs the same tool on demand, which is not a gate.
   - `dependency-diff.yml` + `dependency-diff-comment.yml` — what a lockfile change costs, on the PR that makes it: packages added, install size, and replacement suggestions from e18e's `module-replacements`. `size-limit` guards the bytes that reach a user, but arrives after the dependency is already in. Split in two so the job holding `pull-requests: write` never has a fork's code checked out beside it — see the comment at the top of each.

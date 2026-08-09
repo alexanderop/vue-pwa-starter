@@ -40,6 +40,8 @@ pnpm dev            # Dev server
 pnpm test:unit      # Node unit tier — pure logic, ~100 ms
 pnpm test           # Browser tier (Vitest browser mode)
 pnpm test:a11y      # axe-core sweeps in light AND dark + ARIA snapshots (-- --update)
+pnpm test:touch     # Chromium under touch emulation — the only tier with a coarse
+                    #   pointer, and so the only one that sees what a phone gets
 pnpm test:visual    # Screenshot comparisons (test:visual:update to rebaseline)
 pnpm test:arch      # ArchUnitTS boundary rules
 pnpm test:mutation  # Stryker over the unit tier (~10 s) — grades the assertions,
@@ -57,7 +59,7 @@ pnpm build          # Production build (+ pnpm size-limit for the budget)
 
 `pnpm check` covers every gate that runs without a browser; the lint and
 formatting parts of it are fixable with `pnpm lint` and `pnpm format`. The
-browser tiers (`test`, `test:a11y`, `test:visual`, `test:e2e`) cost minutes and
+browser tiers (`test`, `test:a11y`, `test:touch`, `test:visual`, `test:e2e`) cost minutes and
 stay separate — run the ones your change touches, and let CI run the rest.
 
 ## Effect

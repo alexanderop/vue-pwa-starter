@@ -1,3 +1,4 @@
+import { expect, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { renderApp } from '../helpers/renderApp'
 import { AppScreen } from './appScreen'
@@ -19,4 +20,9 @@ export class SettingsScreen extends AppScreen {
     await page.getByRole('button', { name: 'How to install' }).click()
     await this.install.expectDialogOpen()
   }
+
+  /** On screen and laid out — what a sweep over the rendered page needs. */
+  readonly expectReady = vi.defineHelper(async (): Promise<void> => {
+    await expect.element(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
+  })
 }
