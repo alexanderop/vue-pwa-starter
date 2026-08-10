@@ -41,7 +41,14 @@ jobs:
 
       - name: Compare dependencies
         id: analyze
-        uses: e18e/action-dependency-diff@8e9b8c1957ab066d36235a43f4c1ff1522e1bdbc # v1.6.1
+        # Ahead of the newest release (v1.6.1) on purpose. Through v1.6.1 the
+        # duplicate check reported every package in the tree carrying more than
+        # one version, so a PR that touched no dependency at all still got a
+        # 56-row wall of pre-existing transitive conflicts — noise that trains
+        # you to skip the comment that also carries the size and replacement
+        # findings. e18e#172 makes it report only duplicates the PR introduces.
+        # Move back to a tag once one ships containing that commit.
+        uses: e18e/action-dependency-diff@6fdf9b0581697fc0268c689d774850f95c7b2bf0 # main @ 2026-07-27, unreleased
         with:
           mode: artifact
           detect-replacements: 'true'

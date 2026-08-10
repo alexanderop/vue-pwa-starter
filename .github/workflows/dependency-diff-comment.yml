@@ -46,7 +46,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Post the comment
-        uses: e18e/action-dependency-diff@8e9b8c1957ab066d36235a43f4c1ff1522e1bdbc # v1.6.1
+        # Keep this SHA identical to the one in dependency-diff.yml: the two
+        # halves exchange the artifact this reads, so they share its format.
+        uses: e18e/action-dependency-diff@6fdf9b0581697fc0268c689d774850f95c7b2bf0 # main @ 2026-07-27, unreleased
         with:
           mode: comment-from-artifact
           # The basename the analysis step writes, not the artifact name above:
