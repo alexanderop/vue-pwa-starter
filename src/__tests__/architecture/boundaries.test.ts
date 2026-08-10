@@ -114,6 +114,152 @@ describe('db encapsulation', () => {
 })
 
 /**
+ * Functional core, imperative shell — the lint half.
+ *
+ * `functionalCore.test.ts` asserts the layers still exist and that the core
+ * needs no test doubles; neither of those can catch a component that quietly
+ * grows a decision tree, or a domain module that reads the clock. These do,
+ * and — like the boundary rules above — they cover `.vue`, which is where the
+ * shell actually lives.
+ *
+ * Both directions are asserted for every rule. A rule that rejects everything
+ * is as useless as one that rejects nothing, and the "allowed" cases here are
+ * the ones that would make the rule unlivable if they failed: a guard clause
+ * in a component, and a core function that genuinely branches a lot.
+ *
+ * See docs/functional-core.md for why the thresholds are what they are.
+ */
+describe('functional core, imperative shell', () => {
+  describe('the shell stays thin', () => {
+    it('rejects a component that nests a conditional', async () => {
+      const rules = await lint(
+        'src/views/NotesView.vue',
+        sfc(`function pick(a: number, b: number) {
+  if (a > 0) {
+    if (b > 0) return 'both'
+  }
+  return 'neither'
+}
+void pick`),
+      )
+      expect(rules).toContain('max-depth')
+    })
+
+    it('allows a guard clause — one level is how a shell says "not my job"', async () => {
+      const rules = await lint(
+        'src/views/NotesView.vue',
+        sfc(`function pick(a: number) {
+  if (a < 0) return 'none'
+  return 'some'
+}
+void pick`),
+      )
+      expect(rules).not.toContain('max-depth')
+      expect(rules).not.toContain('complexity')
+    })
+
+    it('rejects a composable that grows a decision tree', async () => {
+      const rules = await lint(
+        'src/composables/useThing.ts',
+        `export function pick(a: number) {
+  return a > 1 ? 1 : a > 2 ? 2 : a > 3 ? 3 : a > 4 ? 4 : 5
+}`,
+      )
+      expect(rules).toContain('complexity')
+    })
+
+    it('applies to a feature component too, not just views', async () => {
+      const rules = await lint(
+        'src/features/notes/components/NoteCard.vue',
+        sfc(`function pick(a: number, b: number) {
+  if (a > 0) {
+    if (b > 0) return 'both'
+  }
+  return 'neither'
+}
+void pick`),
+      )
+      expect(rules).toContain('max-depth')
+    })
+  })
+
+  describe('the core stays deterministic', () => {
+    it.each([
+      ['Date.now()', `export const at = () => Date.now()`, 'no-restricted-properties'],
+      ['Math.random()', `export const r = () => Math.random()`, 'no-restricted-properties'],
+      ['new Date()', `export const at = () => new Date()`, 'no-restricted-syntax'],
+      [
+        'localStorage',
+        `export const read = () => localStorage.getItem('x')`,
+        'no-restricted-globals',
+      ],
+      ['navigator', `export const ua = () => navigator.userAgent`, 'no-restricted-globals'],
+      ['fetch', `export const get = () => fetch('/x')`, 'no-restricted-globals'],
+    ])('rejects %s in a domain module', async (_label, code, rule) => {
+      expect(await lint('src/features/notes/domain.ts', code)).toContain(rule)
+    })
+
+    it('rejects a core module running its own program', async () => {
+      // The core builds programs and hands them up; running one is the shell's
+      // job, and a core module that does it takes the runtime choice — and
+      // TestClock — away from every caller.
+      const rules = await lint(
+        'src/features/notes/domain.ts',
+        `import { Effect } from 'effect'\nexport const now = () => Effect.runSync(Effect.succeed(1))`,
+      )
+      expect(rules).toContain('no-restricted-syntax')
+    })
+
+    it('lets the core branch as hard as it needs to', async () => {
+      // No complexity budget on the core, deliberately: pushing decisions down
+      // here is the point of the pattern, so the layer that receives them must
+      // not be the layer that punishes them. detectInstallPlatform is already
+      // past what the shell is allowed.
+      const rules = await lint(
+        'src/lib/installPlatform.ts',
+        `export function pick(a: number) {
+  return a > 1 ? 1 : a > 2 ? 2 : a > 3 ? 3 : a > 4 ? 4 : a > 5 ? 5 : a > 6 ? 6 : 7
+}`,
+      )
+      expect(rules).not.toContain('complexity')
+    })
+
+    it('still lets the core take ambient values as parameters', async () => {
+      // The escape hatch that makes the ban livable, and the shape
+      // detectInstallPlatform already has: name the signal in the signature.
+      const rules = await lint(
+        'src/lib/installPlatform.ts',
+        `export const isIpad = (signals: { userAgent: string }) => signals.userAgent.includes('iPad')`,
+      )
+      expect(rules).not.toContain('no-restricted-globals')
+    })
+  })
+
+  describe('the platform edge is exempt from both', () => {
+    it('lets the edge nest conditionals', async () => {
+      const rules = await lint(
+        'src/lib/swUpdateCheck.ts',
+        `export function check(a: number, b: number) {
+  if (a > 0) {
+    if (b > 0) return 'both'
+  }
+  return 'neither'
+}`,
+      )
+      expect(rules).not.toContain('max-depth')
+    })
+
+    it('lets the edge touch the platform — that is what it is for', async () => {
+      const rules = await lint(
+        'src/lib/persistentStorage.ts',
+        `export const persist = () => navigator.storage.persist()`,
+      )
+      expect(rules).not.toContain('no-restricted-globals')
+    })
+  })
+})
+
+/**
  * The same encapsulation argument as `db`, applied to the UI layer:
  * `src/components/ui/*` wraps reka-ui in our own primitives, and the rest of
  * the app talks to the wrappers. See docs/ui-components.md.
@@ -182,5 +328,82 @@ describe('ui encapsulation', () => {
       sfc(`import { useTouchDevice } from '@/composables/useTouchDevice'\nvoid useTouchDevice`),
     )
     expect(rules).not.toContain(RULE)
+  })
+})
+
+/**
+ * Composable conventions — the lint half.
+ *
+ * `composables.test.ts` asserts the scope still matches the tree and that a
+ * module-scoped composable brought its reset seam; neither can catch what a
+ * composable does *inside* its body. These do.
+ *
+ * Both directions for every rule, as above. The "allowed" cases are the ones
+ * that would make the rules unlivable: the app-lifetime listener useInstallPrompt
+ * genuinely needs, and a component using `ref` the way every Vue tutorial does.
+ *
+ * See docs/composables.md for where these come from.
+ */
+describe('composable conventions', () => {
+  const SYNTAX = 'no-restricted-syntax'
+  const RETURN_TYPE = '@typescript-eslint/explicit-module-boundary-types'
+
+  it('rejects a deep ref', async () => {
+    const rules = await lint(
+      'src/composables/useThing.ts',
+      `import { ref } from 'vue'\nexport function useThing() {\n  return ref(0)\n}`,
+    )
+    expect(rules).toContain(SYNTAX)
+  })
+
+  it.each([
+    ['shallowRef', `import { shallowRef } from 'vue'\nexport const make = () => shallowRef(0)`],
+    ['deepRef', `import { deepRef } from '@vueuse/core'\nexport const make = () => deepRef([])`],
+  ])('allows %s — the ban is on the default, not on reactivity', async (_label, code) => {
+    expect(await lint('src/composables/useThing.ts', code)).not.toContain(SYNTAX)
+  })
+
+  it('rejects a listener registered inside a composable', async () => {
+    const rules = await lint(
+      'src/composables/useThing.ts',
+      `export function useThing(): void {\n  window.addEventListener('resize', () => {})\n}`,
+    )
+    expect(rules).toContain(SYNTAX)
+  })
+
+  it('allows one at module scope — that listener has no caller to outlive', async () => {
+    // useInstallPrompt's shape: `beforeinstallprompt` fires once on window,
+    // possibly before any component mounts, so the registration cannot wait
+    // for one.
+    const rules = await lint(
+      'src/composables/useThing.ts',
+      `window.addEventListener('beforeinstallprompt', (event) => {\n  event.preventDefault()\n})`,
+    )
+    expect(rules).not.toContain(SYNTAX)
+  })
+
+  it('rejects an inferred return type', async () => {
+    const rules = await lint(
+      'src/composables/useThing.ts',
+      `import { shallowRef } from 'vue'\nexport function useThing() {\n  return { open: shallowRef(false) }\n}`,
+    )
+    expect(rules).toContain(RETURN_TYPE)
+  })
+
+  it('applies to a feature-owned composable too', async () => {
+    const rules = await lint(
+      'src/features/notes/useThing.ts',
+      `import { ref } from 'vue'\nexport function useThing() {\n  return ref(0)\n}`,
+    )
+    expect(rules).toContain(SYNTAX)
+    expect(rules).toContain(RETURN_TYPE)
+  })
+
+  it('leaves components alone — a caller is not a composable', async () => {
+    const rules = await lint(
+      'src/views/NotesView.vue',
+      sfc(`import { ref } from 'vue'\nconst count = ref(0)\nvoid count`),
+    )
+    expect(rules).not.toContain(SYNTAX)
   })
 })

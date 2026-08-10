@@ -1,4 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs'
+import type { Linter } from 'eslint'
 import e18e from '@e18e/eslint-plugin'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
@@ -109,6 +110,201 @@ const NO_APP_STATE = {
   group: ['**/db', '**/db/**', '**/stores/**', ...ANY_FEATURE],
   message:
     'A UI primitive stays presentational — no database, no stores, no features. Bind the data in a feature component and pass it in.',
+}
+
+/**
+ * Functional core, imperative shell — the three layers, as globs.
+ *
+ * Exported because `src/__tests__/architecture/functionalCore.test.ts` asserts
+ * things about the same three sets that ESLint cannot: that every glob still
+ * matches a file, and that the specs for each layer look the way the layer
+ * claims. One definition, two enforcers — the pattern the boundaries above
+ * already use. Full reasoning: docs/functional-core.md.
+ *
+ * The split is not invented here. Three independent signals already agreed on
+ * it before a rule existed: the only two modules that nest a conditional two
+ * deep are the only two whose unit specs need test doubles, and are the two
+ * docs/index.md already calls out as "browser-platform plumbing with no domain
+ * content". That is the edge. Everything above is reactive glue; what is left
+ * is the core.
+ */
+
+/** Pure decisions. No clock, no platform, no reactivity — and no cap on how hard they think. */
+export const CORE = [
+  'src/features/*/domain.ts',
+  'src/db/converters.ts',
+  'src/lib/installPlatform.ts',
+  'src/lib/utils.ts',
+]
+
+/**
+ * The outermost shell: modules whose entire job is to talk to a browser API
+ * that can fail. Imperative on purpose — try/catch, `navigator`, `fetch` — so
+ * the conditional budget below does not apply, and their specs are the only
+ * ones allowed to reach for a test double.
+ */
+export const PLATFORM_EDGE = [
+  'src/lib/persistentStorage.ts',
+  'src/lib/swUpdateCheck.ts',
+  'src/lib/backupFile.ts',
+  'src/lib/download.ts',
+  'src/lib/themeColor.ts',
+  'src/lib/webVitals.ts',
+  'src/lib/observability.ts',
+  'src/main.ts',
+]
+
+/**
+ * Everything between: components, composables, stores, atoms, repositories.
+ * Reactivity is mutation, so none of this is ever pure — the constraint is not
+ * purity but *thinness*. A decision that grows here belongs in CORE, and the
+ * budget is what makes "grows" a build failure instead of a code review.
+ */
+export const REACTIVE_SHELL = [
+  'src/**/*.vue',
+  'src/composables/**/*.ts',
+  'src/stores/**/*.ts',
+  'src/features/*/atoms.ts',
+  'src/features/*/use*.ts',
+  'src/db/**/*.ts',
+  'src/router/**/*.ts',
+]
+
+/**
+ * Thresholds are the measured maxima of the tree that was already here, not
+ * round numbers: .vue peaked at complexity 4 / 6 statements, composables at
+ * 7 statements, and *nothing* in this layer nested two deep. So none of this
+ * is a refactor — it is a ratchet on a shape the code already had.
+ *
+ * `max-depth: 1` is the load-bearing one. Bernhardt's claim is that a real
+ * core/shell split leaves the shell with few conditionals; a second level of
+ * nesting in a component is the first observable sign that a decision failed
+ * to move down. Line count is deliberately *not* capped: an Effect pipeline is
+ * long but flat (`save` in QuickAddNoteSheet is 25 lines at complexity 2), so
+ * max-lines-per-function would only punish the style we want.
+ */
+const SHELL_BUDGET: Linter.RulesRecord = {
+  'max-depth': ['error', 1],
+  complexity: ['error', { max: 4 }],
+  'max-statements': ['error', 7],
+}
+
+/**
+ * What makes the core the core: the same input gives the same answer, forever,
+ * on any machine. Every entry below is a way to read something that is not an
+ * argument. `noteAge` is the worked example of the alternative — it takes
+ * "now" from Effect's `Clock` service, so TestClock can drive every bucket
+ * boundary instead of fake timers guessing at them.
+ */
+const AMBIENT_READS = [
+  'localStorage',
+  'sessionStorage',
+  'indexedDB',
+  'caches',
+  'fetch',
+  'navigator',
+  'document',
+  'window',
+  'location',
+  'history',
+  'crypto',
+  'performance',
+  'alert',
+  'confirm',
+  'prompt',
+  'setTimeout',
+  'setInterval',
+  'requestAnimationFrame',
+]
+
+const CORE_IS_DETERMINISTIC: Linter.RulesRecord = {
+  'no-restricted-globals': [
+    'error',
+    ...AMBIENT_READS.map((name) => ({
+      name,
+      message: `The core reads its inputs from its arguments. \`${name}\` is ambient state, so a function that touches it answers differently depending on when and where it ran — which is the definition of the shell. Take it as a parameter, or move this module to the edge. docs/functional-core.md`,
+    })),
+  ],
+
+  'no-restricted-properties': [
+    'error',
+    {
+      object: 'Date',
+      property: 'now',
+      message:
+        "The core does not read the clock. Take the timestamp as a parameter, or yield Effect's `Clock.currentTimeMillis` — see `noteAge` in src/features/notes/domain.ts, which is testable at every bucket boundary because it did. docs/functional-core.md",
+    },
+    {
+      object: 'Math',
+      property: 'random',
+      message:
+        'The core is deterministic. Take the value as a parameter, or put the generator behind a service default the way src/db/generateId.ts does. docs/functional-core.md',
+    },
+  ],
+
+  'no-restricted-syntax': [
+    'error',
+    {
+      selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+      message:
+        '`new Date()` reads the clock. Pass the timestamp in, or yield `Clock.currentTimeMillis`. docs/functional-core.md',
+    },
+    {
+      selector: "MemberExpression[object.name='Effect'][property.name=/^run/]",
+      message:
+        "Running a program is the shell's job — the core *builds* programs and hands them up. A core module that runs its own has swallowed the shell, and with it the caller's ability to choose a runtime or a TestClock. docs/functional-core.md",
+    },
+  ],
+}
+
+/**
+ * Composables — the reusable half of the reactive shell.
+ *
+ * A subset of REACTIVE_SHELL, scoped separately because the rules below are
+ * about a *public surface* rather than about thinness: these are the modules
+ * other modules call, so what they take and what they hand back is an API.
+ * Both globs, because a composable is either shared (`src/composables/`) or
+ * owned by one feature (`src/features/<name>/use*.ts`) — there is no third
+ * home, and `src/__tests__/architecture/composables.test.ts` reads this array
+ * out of here to assert both still resolve to real files.
+ *
+ * `.vue` is deliberately absent. A `<script setup>` block is a composable's
+ * caller, not a composable; logic that wants these rules belongs in a `.ts`
+ * module, which is what docs/functional-core.md already asks for.
+ *
+ * Full reasoning, and the VueUse conventions these encode: docs/composables.md.
+ */
+export const COMPOSABLES = ['src/composables/*.ts', 'src/features/*/use*.ts']
+
+const COMPOSABLE_CONVENTIONS: Linter.RulesRecord = {
+  // A composable's return value is its API. Inferred, it changes shape
+  // whenever the body does — silently, and for every caller at once. Naming it
+  // is also where the per-key doc comments live: see UseInstallPromptReturn.
+  '@typescript-eslint/explicit-module-boundary-types': 'error',
+
+  'no-restricted-syntax': [
+    'error',
+    {
+      // VueUse's rule, and the reason it is worth adopting: `ref()` deep-proxies
+      // whatever it holds, which for a DOM node, an event, or a decoded row is
+      // both wasted work and a wrapper the platform API will not accept —
+      // `deferredPrompt` in useInstallPrompt is exactly that case. Reach for
+      // `deepRef` (also from @vueuse/core) when nested mutation *is* the point;
+      // it costs the same and says so.
+      selector: "CallExpression[callee.name='ref']",
+      message:
+        '`shallowRef` is the default in a composable — a ref that deep-proxies its contents breaks any value the platform hands back by identity. Use `deepRef` from @vueuse/core when you genuinely need nested reactivity. docs/composables.md',
+    },
+    {
+      // Scoped to calls *inside* a function, which is the whole distinction:
+      // a listener registered at module scope lives as long as the document
+      // and is a deliberate singleton (useInstallPrompt), while one registered
+      // per call has a caller whose scope it must not outlive.
+      selector: ":function CallExpression[callee.property.name='addEventListener']",
+      message:
+        '`useEventListener` from @vueuse/core, not a bare `addEventListener`: it hangs the removal off the calling effect scope, so the listener dies with whatever asked for it. A genuinely app-lifetime listener goes at module scope. docs/composables.md',
+    },
+  ],
 }
 
 type Boundary = { group: string[]; message: string }
@@ -247,4 +443,30 @@ export default defineConfigWithVueTs(
 
   // --- Architecture boundaries (see the comment at the top of this file) ---
   ...boundaries,
+
+  // --- Functional core, imperative shell (see CORE / REACTIVE_SHELL above) ---
+  //
+  // Two disjoint scopes, because flat config *replaces* rule options rather
+  // than merging them — the same caveat that shapes the boundaries above. The
+  // shell block ignores CORE so `src/db/converters.ts`, which both globs
+  // match, is graded as the core file it is.
+  {
+    name: 'app/functional-core/shell-stays-thin',
+    files: REACTIVE_SHELL,
+    ignores: [...CORE, ...PLATFORM_EDGE],
+    rules: SHELL_BUDGET,
+  },
+
+  {
+    name: 'app/functional-core/core-stays-deterministic',
+    files: CORE,
+    rules: CORE_IS_DETERMINISTIC,
+  },
+
+  // --- Composable conventions (see COMPOSABLES above, docs/composables.md) ---
+  {
+    name: 'app/composables',
+    files: COMPOSABLES,
+    rules: COMPOSABLE_CONVENTIONS,
+  },
 )

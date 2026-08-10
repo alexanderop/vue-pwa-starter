@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/vue'
+import type { Ref } from 'vue'
 import { startPeriodicUpdateCheck } from '@/lib/swUpdateCheck'
 
 /**
@@ -26,7 +27,16 @@ const { needRefresh, updateServiceWorker } = useRegisterSW({
   },
 })
 
-export function usePwaUpdate() {
+interface UsePwaUpdateReturn {
+  /** A new service worker is waiting. Writable — the test helper raises it. */
+  needRefresh: Ref<boolean>
+  /** Activate the waiting worker and reload into the new build. */
+  reload: () => void
+  /** Hide the banner for this session; the worker keeps waiting. */
+  dismiss: () => void
+}
+
+export function usePwaUpdate(): UsePwaUpdateReturn {
   function reload(): void {
     void updateServiceWorker(true)
   }

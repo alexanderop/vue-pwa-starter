@@ -1,5 +1,6 @@
 import type { BasicColorSchema } from '@vueuse/core'
 import { useDark, useStorage, useToggle } from '@vueuse/core'
+import type { WritableComputedRef } from 'vue'
 import { watch } from 'vue'
 import { applyThemeColor } from '@/lib/themeColor'
 
@@ -25,12 +26,19 @@ const toggleDark = useToggle(isDark)
 // installed app's status bar on the theme actually rendered.
 watch(isDark, applyThemeColor, { immediate: true })
 
+interface UseThemeReturn {
+  /** Writable: assigning picks a mode, which is what the Settings switch binds. */
+  isDark: WritableComputedRef<boolean>
+  /** Flip it, or pass a value to set it. */
+  toggleDark: (value?: boolean) => boolean
+}
+
 /**
  * Dark mode via VueUse: persists the choice in localStorage, applies the
  * `.dark` class on <html> (which the Tailwind `dark:` variant and the token
  * block in style.css react to), and falls back to the OS preference.
  */
-export function useTheme() {
+export function useTheme(): UseThemeReturn {
   return { isDark, toggleDark }
 }
 

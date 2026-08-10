@@ -45,7 +45,7 @@ defineSlots<{
 const delegatedProps = reactiveOmit(props, 'class', 'showCloseButton')
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
-const { isTouchDevice } = useTouchDevice()
+const isTouchDevice = useTouchDevice()
 
 // On touch devices reka-ui's autofocus would focus the first input and pop
 // the on-screen keyboard while the sheet is still animating in, racing the

@@ -1,4 +1,5 @@
 import { useMediaQuery, useStorage } from '@vueuse/core'
+import type { ComputedRef, ShallowRef } from 'vue'
 import { computed, shallowRef, watch } from 'vue'
 import type { InstallPlatform } from '@/lib/installPlatform'
 import { detectInstallPlatform } from '@/lib/installPlatform'
@@ -104,7 +105,25 @@ window.addEventListener('appinstalled', () => {
   hintDismissed.value = true
 })
 
-export function useInstallPrompt() {
+interface UseInstallPromptReturn {
+  /** The install path exists on this browser (prompt available, or iOS). */
+  canInstall: ComputedRef<boolean>
+  /** A prompt is in hand, so the dialog can offer a button instead of steps. */
+  canPromptDirectly: ComputedRef<boolean>
+  /** Running as an installed app already. */
+  isInstalled: ComputedRef<boolean>
+  /**
+   * Which instructions to show when there is no prompt to issue. A plain
+   * value, not a ref: a document cannot change platforms mid-life.
+   */
+  platform: InstallPlatform
+  /** The banner should be on screen: eligible, and past the settling delay. */
+  hintVisible: ShallowRef<boolean>
+  promptInstall: () => Promise<'accepted' | 'dismissed' | null>
+  dismissHint: () => void
+}
+
+export function useInstallPrompt(): UseInstallPromptReturn {
   /**
    * Trigger the browser's install dialog. Resolves to the user's choice, or
    * `null` when there is no prompt to issue — on iOS that is always, which is
@@ -137,15 +156,10 @@ export function useInstallPrompt() {
   }
 
   return {
-    /** The install path exists on this browser (prompt available, or iOS). */
     canInstall,
-    /** A prompt is in hand, so the dialog can offer a button instead of steps. */
     canPromptDirectly: computed(() => deferredPrompt.value !== null),
-    /** Running as an installed app already. */
     isInstalled,
-    /** Which instructions to show when there is no prompt to issue. */
     platform,
-    /** The banner should be on screen: eligible, and past the settling delay. */
     hintVisible,
     promptInstall,
     dismissHint,

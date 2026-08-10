@@ -1,5 +1,7 @@
 import { test } from 'vitest'
 import { resetAppState } from './helpers/reset'
+import type { Injection, MountedComposable } from './helpers/withSetup'
+import { withSetup } from './helpers/withSetup'
 import { NotesScreen } from './pages/notesScreen'
 import { SettingsScreen } from './pages/settingsScreen'
 
@@ -64,6 +66,51 @@ export const it = test
         document.documentElement.classList.add('dark')
         await settleTransitions()
       },
+    }
+  })
+  /**
+   * Runs a composable inside a component instance — the harness for everything
+   * a composable only does when it has one: lifecycle hooks, `inject`, and the
+   * effect scope its cleanups hang off. See
+   * [docs/testing-composables.md](../../docs/testing-composables.md) for which
+   * composables need it, and `helpers/withSetup.ts` for what it mounts.
+   *
+   * It hands back the harness rather than the bare result, because a spec
+   * about teardown has to be able to say when:
+   *
+   * ```ts
+   * const { result: age, unmount } = mountComposable(() => useNoteAge(at))
+   * ```
+   *
+   * Calling `unmount` is optional and idempotent — the fixture unmounts
+   * whatever is still standing when the test ends, so the usual rule holds:
+   * the spec never has to clean up, and can when that *is* the test.
+   *
+   * `onCleanup` may be called once per fixture, so the unmounts are collected
+   * rather than registered one by one. Innermost first, mirroring the order a
+   * component tree tears down in.
+   *
+   * Deliberately does **not** reset the app state, unlike the screen fixtures:
+   * mounting one composable is not mounting the app, and a spec whose
+   * composable reads the shared preferences says so with
+   * `beforeEach(resetAppState)`, which is the convention
+   * [testing-strategy.md](../../docs/testing-strategy.md) already sets for a
+   * test that needs the reset without a screen. Keeping it out also keeps this
+   * fixture free of the database, so it composes with fake timers.
+   */
+  .extend('mountComposable', async ({}, { onCleanup }) => {
+    const mounted: Array<() => void> = []
+    onCleanup(() => {
+      for (const unmount of mounted.reverse()) unmount()
+    })
+
+    return <T>(
+      composable: () => T,
+      injections?: ReadonlyArray<Injection>,
+    ): MountedComposable<T> => {
+      const harness = withSetup(composable, injections)
+      mounted.push(harness.unmount)
+      return harness
     }
   })
 

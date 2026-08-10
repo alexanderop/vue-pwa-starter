@@ -1,3 +1,4 @@
+import type { RemovableRef } from '@vueuse/core'
 import { useLocalStorage } from '@vueuse/core'
 import { watch } from 'vue'
 import type { SupportedLocale } from '@/i18n'
@@ -30,7 +31,14 @@ function applyLocale(value: string): void {
 
 watch(storedLocale, applyLocale, { immediate: true })
 
-export function useLocale() {
+interface UseLocaleReturn {
+  /** The persisted choice. Writable, so the Settings select can v-model it. */
+  locale: RemovableRef<SupportedLocale>
+  setLocale: (next: SupportedLocale) => void
+  supportedLocales: typeof SUPPORTED_LOCALES
+}
+
+export function useLocale(): UseLocaleReturn {
   function setLocale(next: SupportedLocale): void {
     storedLocale.value = next
   }
