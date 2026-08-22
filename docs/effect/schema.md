@@ -7,11 +7,11 @@ status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/SCHEMA.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
-# Schema And Data Modeling
+# Schema and data modeling
 
 Use this when touching data models, DTOs, row schemas, wire contracts, brands, variants, optional fields, or decoders.
 
@@ -39,7 +39,7 @@ Guidance:
 - Use `Schema.decodeUnknownOption(...)` only when mismatch details are intentionally discarded.
 - Use `Schema.decodeUnknownResult(...)` for pure code that wants explicit success/failure without Effect.
 
-## Field And Contract Reuse
+## Field and contract reuse
 
 Reuse fields directly when contracts are semantically related.
 
@@ -64,7 +64,7 @@ Guidance:
 - Use `Schema.extendTo(...)` sparingly for decoded-only derived fields.
 - Use field reuse to build small related contracts, not one oversized inheritance-by-schema object.
 
-## Optionality And Defaults
+## Optionality and defaults
 
 - Use `Schema.optionalKey(...)` for absent JSON/storage keys.
 - Use `Schema.optional(...)` only when explicit `undefined` is part of the contract.
@@ -72,7 +72,7 @@ Guidance:
 - Keep normalized defaulted values as required fields and apply defaults in constructors/decoding.
 - Do not make domain values optional merely for construction convenience.
 
-## Nominal Values
+## Nominal values
 
 - Use constrained branded schemas for scalar IDs and value objects.
 - Use normal schema constraints before `Schema.brand(...)` for most code.
@@ -138,6 +138,6 @@ Guidance:
 
 - Map infrastructure failures into domain-specific tagged errors at service boundaries.
 - Include operation labels when they help diagnose adapter, persistence, provider, or transport failures.
-- Use schema unions for public API or transport error surfaces.
+- Use schema unions for errors that cross a public API or a transport.
 - Use `Schema.Defect()` for defect-like payloads.
 - Preserve interruption when catching broad causes at ingress, worker, or stream boundaries.

@@ -1,16 +1,16 @@
 ---
 type: Convention
 title: UI components
-description: How this starter writes shadcn-vue-style primitives on top of reka-ui — the four levers every primitive gives its consumer, and the rules that keep them open.
+description: How this starter writes shadcn-vue-style primitives on top of reka-ui, the four levers every primitive gives its consumer, and the rules that keep them open.
 tags: [ui, components, reka-ui, shadcn, composition, tailwind]
 status: stable
 sources:
   - resource: https://github.com/unovue/shadcn-vue
     id: shadcn-vue
-    title: unovue/shadcn-vue — the pattern this layer copies
+    title: unovue/shadcn-vue, the pattern this layer copies
   - resource: https://reka-ui.com/
     id: reka-ui
-    title: Reka UI — the headless behaviour underneath
+    title: Reka UI, the headless behaviour underneath
 ---
 
 # UI components
@@ -18,22 +18,22 @@ sources:
 `src/components/ui/*` holds this app's design system: our components, our
 markup, our classes, wrapping [Reka UI](https://reka-ui.com/)'s headless
 behaviour. They are written in the style [shadcn-vue](https://www.shadcn-vue.com/)
-established, but shadcn-vue is **not a dependency** — the pattern is copied,
+established, but shadcn-vue is not a dependency. The pattern is copied,
 not installed.
 
 That is the point of shadcn-vue rather than an oversight: the components are
 meant to be owned. A dialog that needs to become a keyboard-aware bottom sheet
 on phones is an edit to a file in this repo, not a fight with a package's
-props. What we take from upstream is the *shape* of the files, which is what
+props. What we take from upstream is the _shape_ of the files, which is what
 the rest of this document describes.
 
 ## What each layer owns
 
-| Layer | Owns | Never |
-| --- | --- | --- |
-| Reka UI | Focus traps, ARIA wiring, escape/outside-click, `data-state`, portals | Renders no styling of its own |
-| `src/components/ui/*` | Markup, Tailwind classes, `data-slot`, variants | Reads the database, stores, or a feature |
-| Features and views | Composition — which parts, in what tree, with what data | Imports `reka-ui` or `class-variance-authority` |
+| Layer                 | Owns                                                                  | Never                                           |
+| --------------------- | --------------------------------------------------------------------- | ----------------------------------------------- |
+| Reka UI               | Focus traps, ARIA wiring, escape/outside-click, `data-state`, portals | Renders no styling of its own                   |
+| `src/components/ui/*` | Markup, Tailwind classes, `data-slot`, variants                       | Reads the database, stores, or a feature        |
+| Features and views    | Composition: which parts, in what tree, with what data                | Imports `reka-ui` or `class-variance-authority` |
 
 The layer boundary is enforced, not just described. See [Enforcement](#enforcement).
 
@@ -43,11 +43,11 @@ Every primitive hands the call site four independent ways to bend it. A
 primitive that closes one of them has to be edited to serve the next variant,
 which is how a design system rots into flags.
 
-### STRUCTURE — the tree is the variant
+### Structure: the tree is the variant
 
 A compound primitive is a set of small parts sharing state through a
 provider, not one component that renders every arrangement it might be asked
-for. The consumer assembles the parts; the arrangement *is* the variant.
+for. The consumer assembles the parts; the arrangement _is_ the variant.
 
 ```vue
 <Dialog v-model:open="open">
@@ -74,12 +74,12 @@ on a flag, and no state has to be plumbed back out through
 the dialog to begin with.
 
 State lives in the provider (`Dialog`), not in the layout, which is why
-`<DialogClose>` works wherever the consumer puts it — in the footer, pinned to
+`<DialogClose>` works wherever the consumer puts it: in the footer, pinned to
 a corner, or outside `<DialogContent>` entirely.
 
-### STYLE — `cn()` merges, it does not concatenate
+### Style: `cn()` merges, it does not concatenate
 
-Every primitive that paints anything accepts `class` and merges it *after*
+Every primitive that paints anything accepts `class` and merges it _after_
 its own defaults:
 
 ```vue
@@ -96,14 +96,14 @@ stylesheet order.
 Two consequences worth internalising:
 
 - **`class` is consumed, never forwarded.** When a primitive wraps a reka
-  part, `class` is stripped from the props before they are forwarded —
-  `reactiveOmit(props, 'class')` — and applied through `cn()` instead.
+  part, `class` is stripped from the props before they are forwarded, via
+  `reactiveOmit(props, 'class')`, and applied through `cn()` instead.
   Forwarding it would set it verbatim and drop the defaults.
 - **A part that paints nothing needs no `class` prop.** `DialogTrigger` sets
   no classes, so Vue's attribute fallthrough already merges whatever the
   consumer passes. Adding the prop there would be ceremony.
 
-### STATE — `data-*` is the public contract
+### State: `data-*` is the public contract
 
 Reka writes lifecycle state to the DOM (`data-state="open" | "closed"`,
 `data-disabled`, `data-orientation`), and primitives add `data-slot` to name
@@ -116,15 +116,17 @@ variants:
 
 ```css
 /* a parent can target a part without knowing its utilities */
-.prose [data-slot='dialog-footer'] { gap: 0.75rem; }
+.prose [data-slot='dialog-footer'] {
+  gap: 0.75rem;
+}
 ```
 
 Attributes rather than classes, because `class` belongs to the consumer (see
-STYLE) and because a utility list is refactored while `data-state="open"`
-survives. **Every primitive carries a `data-slot`** — the architecture tier
-fails the build if one does not.
+[Style](#style-cn-merges-it-does-not-concatenate)) and because a utility list
+is refactored while `data-state="open"` survives. Every primitive carries a
+`data-slot`, and the architecture tier fails the build if one does not.
 
-### ELEMENT — `as-child` swaps the tag
+### Element: `as-child` swaps the tag
 
 `as-child` hands the primitive's behaviour to the consumer's own element
 instead of rendering its own:
@@ -153,8 +155,8 @@ import { cn } from '@/lib/utils'
 
 const props = defineProps<DialogTitleProps & { class?: HTMLAttributes['class'] }>()
 
-const delegatedProps = reactiveOmit(props, 'class')   // class is ours to merge
-const forwarded = useForwardProps(delegatedProps)     // everything else is reka's
+const delegatedProps = reactiveOmit(props, 'class') // class is ours to merge
+const forwarded = useForwardProps(delegatedProps) // everything else is reka's
 </script>
 
 <template>
@@ -177,11 +179,11 @@ Five moves, in every file:
 5. `cn(defaults, props.class)`.
 
 A part that renders a plain element instead of wrapping reka (`DialogHeader`,
-`DialogFooter`) skips steps 1–3 and keeps 4 and 5.
+`DialogFooter`) skips steps 1 to 3 and keeps 4 and 5.
 
-Variants — genuinely stylistic axes like `variant` and `size` — go in the
-barrel as a `cva()` table, not as `v-if` branches. `src/components/ui/button/index.ts`
-is the worked example.
+Variants, meaning genuinely stylistic axes like `variant` and `size`, go in the
+barrel as a `cva()` table rather than as `v-if` branches.
+`src/components/ui/button/index.ts` is the worked example.
 
 ## Enforcement
 
@@ -194,7 +196,7 @@ imports, including in `.vue` files:
   `src/components/ui/**`.
 - App code imports a primitive from its barrel (`@/components/ui/dialog`),
   never from the file inside it.
-- A primitive may not import `@/db`, `@/stores/*`, or any feature — primitives
+- A primitive may not import `@/db`, `@/stores/*`, or any feature. Primitives
   stay presentational.
 - `shadcn-vue` and `radix-vue` are banned everywhere: we copy the pattern
   rather than depend on it.
@@ -207,18 +209,18 @@ covers file shape, which ESLint cannot see:
 - every primitive carries a `data-slot`;
 - a primitive that sets classes accepts `class` and merges it through `cn()`,
   and a primitive that accepts `class` actually uses it;
-- a primitive declares **at most three configuration props beyond `class`**.
+- a primitive declares at most three configuration props beyond `class`.
 
-`touchConventions.test.ts` covers the other half of the contract — that a
-control answers a touch, and that nothing writes an unclamped inset. See
+`touchConventions.test.ts` covers the other half of the contract, that a
+control answers a touch and that nothing writes an unclamped inset. See
 [Answering a touch](#answering-a-touch) below.
 
 That last one is the flag-sprawl tripwire. Props forwarded from a reka type
-(`DialogContentProps & { … }`) are not counted — only the ones the component
+(`DialogContentProps & { … }`) are not counted, only the ones the component
 invents.
 
 Both suites also assert the rules reject deliberate violations
-(`boundaries.test.ts`, and the closing block of `uiPrimitives.test.ts`); a rule
+(`boundaries.test.ts`, and the closing block of `uiPrimitives.test.ts`). A rule
 that has only ever seen passing input is not a rule.
 
 ## Answering a touch
@@ -231,10 +233,10 @@ The button base is the worked example, and the shape every interactive
 primitive copies:
 
 ```ts
-// base — the press state lives here, not in a variant
+// base: the press state lives here, not in a variant
 'select-none touch-manipulation transition-[color,background-color,box-shadow,transform] duration-100 active:scale-[0.97] …'
 
-// sizes — touch-first, collapsed for a fine pointer
+// sizes: touch-first, collapsed for a fine pointer
 size: {
   default: 'h-touch-target px-4 py-2 pointer-fine:h-10',
   icon: 'size-touch-target pointer-fine:size-10',
@@ -248,7 +250,7 @@ Two things to internalise before adding a variant:
   never fire and the control answers a tap with nothing. `active:` is what
   answers; `hover:` is the mouse's extra.
 - **The floor is the default, the collapse is the exception.** Written the
-  other way round, the untested default is the phone one — and the phone is
+  other way round, the untested default is the phone one, and the phone is
   what this app is for.
 
 `src/__tests__/architecture/touchConventions.test.ts` fails the build for a
@@ -262,34 +264,35 @@ conventions that live outside this layer:
 1. **Check Reka has it.** `~/Projects/opensource/reka-ui` is the checked-out
    source; `packages/core/src/<Name>/` holds the parts and their prop types.
    If Reka has no headless version, write the behaviour yourself in the same
-   shape — provider component plus small parts.
+   shape, a provider component plus small parts.
 2. **Read the upstream file.** `~/Projects/opensource/shadcn-vue` at
    `apps/v4/registry/new-york-v4/ui/<name>/` is the reference implementation.
-   Copy its structure; do not copy its classes blindly — this app has its own
-   tokens (`--spacing-touch-target`, `--text-section-title`) in `src/style.css`.
+   Copy its structure; do not copy its classes blindly, since this app has its
+   own tokens (`--spacing-touch-target`, `--text-section-title`) in
+   `src/style.css`.
 3. **One directory per primitive**, one file per part, plus `index.ts`.
    Filenames are `PascalCase.vue` and match the exported name.
 4. **Wire the five moves** above into each part.
-5. **Export from the barrel.** Do not re-export raw reka parts from it — wrap
+5. **Export from the barrel.** Do not re-export raw reka parts from it. Wrap
    them, so every part carries a `data-slot` and the lint rule stays total.
 6. **Run `pnpm check`.** The arch tier will tell you which of the rules above
    you missed, by name.
 
 Primitives are not unit-tested on their own: they have no logic to test. What
-gets a test is behaviour the primitive *adds* — `dialogContent.spec.ts` covers
+gets a test is behaviour the primitive _adds_. `dialogContent.spec.ts` covers
 the scroll region surviving a keyboard-shrunk viewport, in the browser tier.
 See [testing-strategy.md](testing-strategy.md).
 
 ## Composition over configuration
 
-The diagnostic, when a prop is tempting: **does it change *what* renders, or
-*how*?**
+The diagnostic, when a prop is tempting: does it change _what_ renders, or
+_how_?
 
-- *How* props are fine: `variant`, `size`, `class`. They select a style for a
+- _How_ props are fine: `variant`, `size`, `class`. They select a style for a
   fixed tree.
-- *What* props are the smell: `mode`, `showHeader`, `hasFooter`,
+- _What_ props are the smell: `mode`, `showHeader`, `hasFooter`,
   `headerCentered`. Each one moves a decision that belongs at the call site
-  into a branch inside the component, and they compound — the next variant
+  into a branch inside the component, and they compound. The next variant
   needs one more, and the tree that renders is now spread across a dozen
   conditionals.
 
@@ -299,12 +302,12 @@ a component the consumer places, or omits, itself.
 ### The convenience layer
 
 Eventually someone wants `<ConfirmDialog title="…" description="…" />` instead
-of eight tags. Build it **on top of** the primitives, as a separate component
-in `src/components/` or inside the feature that needs it — never as flags
+of eight tags. Build it on top of the primitives, as a separate component
+in `src/components/` or inside the feature that needs it, never as flags
 added to the primitive:
 
 ```vue
-<!-- ConfirmDialog.vue — a consumer of the primitives, not an extension -->
+<!-- ConfirmDialog.vue: a consumer of the primitives, not an extension -->
 <template>
   <Dialog v-model:open="open">
     <DialogContent>
@@ -330,7 +333,7 @@ collapsing back into a flag-configured monolith over time.
 
 A primitive with one shape and no state does not need a provider and parts.
 `<Input>`, `<Label>`, `<Textarea>` are single components on purpose. Build the
-compound version when a real second variant exists — not in anticipation of
+compound version when a real second variant exists, not in anticipation of
 one.
 
 ## Where this codebase deviates from upstream shadcn-vue
@@ -340,15 +343,15 @@ upstream file:
 
 - **`DialogContent` is a bottom sheet on phones.** Mobile-first is the
   product, so there is one content component, not a desktop dialog plus a
-  separate drawer. It mounts its own `DialogPortal` and `DialogOverlay` —
-  forgetting the overlay is a silent accessibility regression, not a visible
-  one — and it is keyboard-aware via `--keyboard-inset` (see
+  separate drawer. It mounts its own `DialogPortal` and `DialogOverlay`, and
+  forgetting the overlay is a silent accessibility regression rather than a
+  visible one. It is keyboard-aware via `--keyboard-inset` (see
   `useKeyboardInset`).
 - **`defineModel` for state a component owns; forwarding for state a reka
   part owns.** Upstream uses `useVModel` from VueUse for Vue 3.3 compatibility;
   this project pins 3.5 and uses `defineModel` (see [the index](index.md)). But `Switch`
   forwards `modelValue` to `SwitchRoot` rather than declaring `defineModel`,
-  because reka already implements that model — two owners of one value drift.
+  because reka already implements that model, and two owners of one value drift.
 - **Strings come from i18n.** Upstream hard-codes `"Close"`; this project
   requires every user-facing string in `src/i18n/messages/*`, so
   `DialogContent` uses `useI18n()`.
@@ -361,9 +364,9 @@ upstream file:
 ## Reading the real source
 
 Both reference trees are cloned and announced to every session (see
-**References** in [the index](index.md)) — read them instead of recalling an API:
+**References** in [the index](index.md)). Read them instead of recalling an API:
 
-- `~/Projects/opensource/reka-ui` — `packages/core/src/<Name>/` for what a
+- `~/Projects/opensource/reka-ui`, at `packages/core/src/<Name>/`, for what a
   part accepts, emits, and writes to the DOM.
-- `~/Projects/opensource/shadcn-vue` — `apps/v4/registry/new-york-v4/ui/` for
-  the canonical file shape.
+- `~/Projects/opensource/shadcn-vue`, at `apps/v4/registry/new-york-v4/ui/`,
+  for the canonical file shape.

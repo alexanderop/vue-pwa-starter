@@ -7,7 +7,7 @@ status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/STREAMS.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
@@ -15,7 +15,7 @@ sources:
 
 Use this when working with `Stream`, event sources, async iterables, queue/pubsub-backed streams, pagination, backpressure, throttling, debouncing, or long-lived stream consumers.
 
-## Mental Model
+## Mental model
 
 `Stream<A, E, R>` is an effectful source that can emit many `A` values over time, fail with `E`, and require services `R`. Streams are pull-based and backpressured; consumption controls demand.
 
@@ -31,7 +31,7 @@ Use streams for sources that are naturally many-valued and time-ordered:
 
 Do not use streams just to loop forever. For one repeated effect with no emitted values, use `Effect.repeat(...)` with `Schedule`; read `SCHEDULING.md`.
 
-## Source Chooser
+## Source chooser
 
 - In-memory values: `Stream.make(...)` or `Stream.fromIterable(...)`.
 - Test fixtures: `Stream.fromIterable(...)`, often with `Stream.concat(Stream.never)` for an open subscription.
@@ -43,7 +43,7 @@ Do not use streams just to loop forever. For one repeated effect with no emitted
 - Async iterable/platform source: `Stream.fromAsyncIterable(...)` when no native Effect source exists.
 - Effect that produces a stream after reading services/config: `Stream.unwrap(...)`.
 
-## Transformation Chooser
+## Transformation chooser
 
 - Pure transformation: `Stream.map(...)`.
 - Effectful transformation: `Stream.mapEffect(...)`.
@@ -55,7 +55,7 @@ Do not use streams just to loop forever. For one repeated effect with no emitted
 - Stateful transformation: `Stream.mapAccum(...)` / `Stream.mapAccumEffect(...)`.
 - Paginated pull-to-pages: prefer `Stream.paginate(...)` over hand-rolled loops. There is no separate `Stream.paginateEffect`.
 
-## Consumption Chooser
+## Consumption chooser
 
 - Side-effecting consumer: `Stream.runForEach(...)`.
 - Ignore elements but run the stream: `Stream.runDrain`.
@@ -66,7 +66,7 @@ Do not use streams just to loop forever. For one repeated effect with no emitted
 
 Avoid `Stream.runCollect` on unbounded or production event streams.
 
-## Long-Lived Consumers
+## Long-lived consumers
 
 Own long-lived stream consumers in layers and fork them into the layer scope.
 
@@ -91,7 +91,7 @@ Guidance:
 - If methods need to fork work into the layer lifetime, capture `Scope.Scope` during layer acquisition and use `Effect.forkIn(scope)` internally. Do not expose the scope as public service API.
 - Preserve stream failures unless the owning boundary has a truthful recovery policy.
 
-## Queues, PubSub, And SubscriptionRef
+## Queues, PubSub, and SubscriptionRef
 
 - Use `Queue` when each event/item should be consumed by one consumer or worker.
 - Use `PubSub` when every subscriber should see every event.
@@ -110,7 +110,7 @@ export interface Interface {
 
 Implementation can use private `Queue` / `SubscriptionRef`; consumers see streams.
 
-## Backpressure And Buffers
+## Backpressure and buffers
 
 Prefer natural stream backpressure first.
 
@@ -123,7 +123,7 @@ Use `Stream.buffer(...)` only when producer and consumer should decouple.
 
 Use `Stream.debounce(...)` for quiet-period behavior and `Stream.throttle(...)` / `Stream.throttleEffect(...)` for rate-shaped streams.
 
-## Error Handling
+## Error handling
 
 - Prefer typed stream errors over defects.
 - Use `Stream.mapError(...)` to translate errors at boundaries.
@@ -131,7 +131,7 @@ Use `Stream.debounce(...)` for quiet-period behavior and `Stream.throttle(...)` 
 - Use `Stream.catchCause(...)` only at explicit supervision boundaries.
 - Do not hide stream defects by default; let them reach the owning layer/runtime unless the stream is explicitly best-effort.
 
-## Keyed Concurrency
+## Keyed concurrency
 
 For streams of work keyed by session/channel/id, prefer a named helper over ad hoc maps of fibers.
 

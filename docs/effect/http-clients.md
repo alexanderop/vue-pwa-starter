@@ -7,11 +7,11 @@ status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/HTTP_CLIENTS.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
-# HTTP Clients
+# HTTP clients
 
 Use this when writing outgoing HTTP calls, Effect HttpClient adapters, status classification, HTTP retries, or rate limiting.
 
@@ -24,7 +24,7 @@ Use Effect HTTP client modules for outgoing HTTP in app/provider code:
 
 Prefer Effect HttpClient in Effect application and provider code when its typed errors, layers, and transforms are useful. Raw `fetch` remains reasonable for browser or edge constraints, small adapters, platform transports, and libraries that intentionally avoid unstable Effect HTTP APIs.
 
-## Boundary Shape
+## Boundary shape
 
 HTTP adapter methods should be named effects that own the full boundary:
 
@@ -54,7 +54,7 @@ Useful APIs:
 - `HttpClient.retryTransient(...)` for common transient HTTP failures.
 - `HttpClient.withRateLimiter(...)` for proactive pacing and learning from rate-limit headers. It requires a `RateLimiter` plus initial window, limit, and key options; it adds `RateLimiterError` to the error channel and retries `429` responses by default.
 
-## Retry And Rate Limits
+## Retry and rate limits
 
 Use `HttpClient.retryTransient(...)` for common transient HTTP failures:
 
@@ -71,7 +71,7 @@ Use `HttpClient.withRateLimiter(...)` when the client should proactively pace re
 
 Use operation-level `Effect.retry(...)` when retry depends on domain-specific typed errors, provider payloads, or idempotency rules. Read `SCHEDULING.md` for custom schedules and `retryAfterMs` typed-provider patterns.
 
-## Raw Fetch Exception
+## Raw fetch exception
 
 Use raw `fetch` deliberately when implementing a platform transport, adapting an API that cannot use Effect HttpClient, or targeting a runtime/library boundary where the unstable Effect HTTP modules are not an appropriate dependency.
 

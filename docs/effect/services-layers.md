@@ -1,21 +1,21 @@
 ---
 type: Reference
 title: Services, layers, and modules
-description: Service tags, module surfaces, layer implementations, runtime wiring, and Effect.fn operation boundaries.
+description: Service tags, module APIs, layer implementations, runtime wiring, and Effect.fn operation boundaries.
 tags: [effect, services, layers, runtime]
 status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/SERVICES_LAYERS.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
-# Services, Layers, And Modules
+# Services, layers, and modules
 
-Use this when defining service tags, module surfaces, layer implementations, runtime wiring, typed errors, or `Effect.fn` operation boundaries.
+Use this when defining service tags, module APIs, layer implementations, runtime wiring, typed errors, or `Effect.fn` operation boundaries.
 
-## Module Surface
+## Module API
 
 One opinionated application-module style uses file-local role names and one canonical ES module namespace projection. Follow the existing codebase's module style when it has one; this convention is not required by Effect.
 
@@ -77,11 +77,11 @@ Guidance:
 - Sibling modules import that namespace from the owning leaf; they do not import through their own aggregate barrel.
 - Folder and package barrels relay established leaf identities with `export { UserRepo } from "./user-repo.js"`.
 - The resulting `UserRepo.UserRepo === UserRepo` self-reference is unusual. Use this pattern only where the runtime and toolchain support it; otherwise use named exports or a separate barrel.
-- Export only intentional surface; keep local schemas, row codecs, helpers, and implementation details unexported.
+- Export only what is meant to be public; keep local schemas, row codecs, helpers, and implementation details unexported.
 - Do not introduce TypeScript `namespace` declarations for organization.
 - Use a named service class such as `class UserRepo extends Context.Service...` when an external library or existing codebase does not use module namespace style.
 
-## Layer Constructors
+## Layer constructors
 
 Choose the layer constructor that matches the thing produced.
 
@@ -99,7 +99,7 @@ Guidance:
 - Use `Layer.fresh(...)` or `Effect.provide(layer, { local: true })` only when a test or operation needs isolated acquisition.
 - Use `Context.Reference` rarely, only for ambient/defaultable runtime references where a safe default is real.
 
-## Long-Lived Work
+## Long-lived work
 
 A layer that starts a stream, listener, worker, subscription, or forever loop must fork that work into the layer scope. Layer acquisition must complete.
 
@@ -122,7 +122,7 @@ Guidance:
 - Do not run forever work inline during layer acquisition.
 - Do not expose public `start` methods unless the domain explicitly needs manual lifecycle control.
 
-## Runtime Wiring
+## Runtime wiring
 
 - Use `Layer.provide(...)` to hide an implementation dependency.
 - Use `Layer.provideMerge(...)` only when the dependency should remain exposed for downstream consumers.
@@ -166,7 +166,7 @@ Guidance:
 - Do not build long clever pipelines; one or two transforms is usually enough.
 - Do not use this for local branch-level handling inside the workflow.
 
-## Operation Error Helpers
+## Operation error helpers
 
 For boundary errors with operation labels, prefer a shared curried `mapError` helper over hand-writing wrappers in every module.
 

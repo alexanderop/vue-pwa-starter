@@ -7,7 +7,7 @@ status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/CONFIG.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
@@ -37,7 +37,7 @@ export const layerFromEnvironment = Layer.effect(
 )
 ```
 
-## Config Recipes
+## Config recipes
 
 - `Config<T>` is yieldable and reads the current `ConfigProvider` reference.
 - The default provider is `ConfigProvider.fromEnv()`.
@@ -58,7 +58,7 @@ export const layerFromEnvironment = Layer.effect(
 - Use `ConfigProvider.nested(...)` to scope a provider under a prefix.
 - Treat `.env`, directory, and environment providers as startup/boundary sources, not business-workflow reads.
 
-## Layer Config Helpers
+## Layer config helpers
 
 Library-style layers often expose both concrete `layer(options)` and config-backed `layerConfig(options: Config.Wrap<Options>)`.
 

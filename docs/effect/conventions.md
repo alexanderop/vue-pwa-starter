@@ -1,13 +1,13 @@
 ---
 type: Convention
 title: Effect v4 conventions
-description: Production defaults for Effect v4 — what to reach for, where boundaries sit, and what never to do.
+description: Production defaults for Effect v4: what to reach for, where boundaries sit, and what never to do.
 tags: [effect, conventions, defaults]
 status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/SKILL.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
@@ -19,8 +19,8 @@ Use current Effect v4 APIs and the production defaults below. Project convention
 
 Check these before guessing:
 
-- the [knowledge index](../index.md) — injected into every agent session — for where Effect starts and stops in this codebase
-- the project-pinned `effect` package source and version — `~/Projects/opensource/effect` on branch `pinned/4.0.0-beta.105`, starting with its `LLMS.md`, `SCHEMA.md`, and the runnable examples under `ai-docs/src/**`
+- the [knowledge index](../index.md), injected into every agent session, for where Effect starts and stops in this codebase
+- the project-pinned `effect` package source and version: `~/Projects/opensource/effect` on branch `pinned/4.0.0-beta.105`, starting with its `LLMS.md`, `SCHEMA.md`, and the runnable examples under `ai-docs/src/**`
 - current upstream Effect source when the installed package does not answer the question
 
 Online docs and v3 training data describe a different API. Do not use them.

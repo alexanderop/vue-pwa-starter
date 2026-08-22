@@ -6,21 +6,21 @@ Read only the concepts that match the task. If a task spans several, read all th
 
 ## Start here
 
-- [Effect v4 conventions](conventions.md) - core defaults, quick selection guide, boundary rules, and do-nots. Read this one for any Effect work.
+- [Effect v4 conventions](conventions.md): core defaults, quick selection guide, boundary rules, and do-nots. Read this one for any Effect work.
 
 ## Branch chooser
 
-- [Schema and data modeling](schema.md) - data models, schemas, brands, variants, optional keys, or decoders.
-- [Services, layers, and modules](services-layers.md) - services, module surfaces, layers, runtime wiring, errors, `Effect.fn`, or test services.
-- [Config](config.md) - runtime config, env variables, `ConfigProvider`, or `layerConfig`.
-- [Scheduling and retry](scheduling.md) - retry, repeat, polling, backoff, jitter, rate-limit-aware policies, or pass loops.
-- [Caching, memoization, and request dedupe](caching.md) - memoization, per-key TTL caches, deduplicating concurrent lookups, or request batching.
-- [Streams](streams.md) - streams, event sources, async iterables, queues/pubsubs, pagination, backpressure, or stream consumers.
-- [HTTP clients](http-clients.md) - outgoing HTTP calls, Effect HttpClient, status handling, or HTTP rate limiting.
-- [Testing Effect code](testing.md) - Effect tests, time, sleeps, concurrency synchronization, or fakes.
+- [Schema and data modeling](schema.md): data models, schemas, brands, variants, optional keys, or decoders.
+- [Services, layers, and modules](services-layers.md): services, a module's public API, layers, runtime wiring, errors, `Effect.fn`, or test services.
+- [Config](config.md): runtime config, env variables, `ConfigProvider`, or `layerConfig`.
+- [Scheduling and retry](scheduling.md): retry, repeat, polling, backoff, jitter, rate-limit-aware policies, or pass loops.
+- [Caching, memoization, and request dedupe](caching.md): memoization, per-key TTL caches, deduplicating concurrent lookups, or request batching.
+- [Streams](streams.md): streams, event sources, async iterables, queues/pubsubs, pagination, backpressure, or stream consumers.
+- [HTTP clients](http-clients.md): outgoing HTTP calls, Effect HttpClient, status handling, or HTTP rate limiting.
+- [Testing Effect code](testing.md): Effect tests, time, sleeps, concurrency synchronization, or fakes.
 
 ## Where Effect lives in this project
 
-The project-specific boundary — which code is Effect and which stays plain async TypeScript, and how Effect meets Vue at atoms — is in the [knowledge index](../index.md), not here. These concepts describe Effect; the index describes this codebase's use of it, and wins where they differ.
+The project-specific boundary is in the [knowledge index](../index.md), not here: which code is Effect and which stays plain async TypeScript, and how Effect meets Vue at atoms. These concepts describe Effect; the index describes this codebase's use of it, and wins where they differ.
 
-Some concepts here cover surface this browser-only app does not currently use (HTTP clients, config providers, long-lived streams). They are kept because the starter is meant to be copied into apps that grow those surfaces.
+Some concepts here cover ground this browser-only app does not currently use (HTTP clients, config providers, long-lived streams). They are kept because the starter is meant to be copied into apps that grow into them.

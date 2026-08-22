@@ -7,17 +7,17 @@ status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/SCHEDULING.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
-# Scheduling And Retry
+# Scheduling and retry
 
 Use this when writing retries, repeats, polling workers, backoff, jitter, rate-limit-aware policies, timeouts, or pass loops.
 
 Use `Schedule` for retry, polling, pacing, and repeated background work instead of hand-rolled `while (true)` loops with sleeps.
 
-## Core Rules
+## Core rules
 
 - `Effect.retry(...)` retries typed failures; defects and interruptions are not retried.
 - `Effect.repeat(...)` repeats successful effects; failures stop repetition unless the pass handles them first.
@@ -34,7 +34,7 @@ Use `Schedule` for retry, polling, pacing, and repeated background work instead 
 - Retry only at the narrowest boundary with proven idempotency.
 - Exhausted failures should remain visible unless the boundary has a truthful fallback.
 
-## Polling Workers
+## Polling workers
 
 Prefer typed pass failures over cause recovery.
 
@@ -65,7 +65,7 @@ const logNonInterruptCauseAndContinue = (message: string) =>
 
 Do not catch causes just to make failures disappear. If only expected typed failures should be recoverable, use `Effect.catchIf(...)`, `Effect.catchFilter(...)`, `Effect.catchTag(...)`, or `Effect.retry(...)` on those typed errors instead.
 
-## Per-Item Failure Isolation
+## Per-item failure isolation
 
 For batch workers, catch expected item-level typed failures around each item so one bad item does not stall the batch.
 
@@ -87,7 +87,7 @@ yield* Effect.forEach(
 
 Only do this when retrying the item later is truthful or skipping the item is the product policy.
 
-## Reusable Retry Policy
+## Reusable retry policy
 
 ```ts
 const projectionRetrySchedule: Schedule.Schedule<unknown, ProjectionError> =
@@ -113,7 +113,7 @@ const reconcileWithRetry = (target: Target) =>
 
 Use this when the operation is idempotent and retry state is useful for logs or metrics.
 
-## Rate-Limit-Aware Typed Retry
+## Rate-limit-aware typed retry
 
 For provider errors that carry `retryAfterMs`, let the schedule use the larger of the backoff delay and the provider delay.
 
@@ -139,7 +139,7 @@ const providerRetrySchedule: Schedule.Schedule<RateLimited, RateLimited> =
 
 Use this for operation-level retries over typed provider errors. For Effect HttpClient-level 429 handling and proactive pacing, read `HTTP_CLIENTS.md`.
 
-## Timeouts And Delays
+## Timeouts and delays
 
 - Use `Effect.timeout(...)` when the operation has a real deadline.
 - Use `Effect.delay(...)` when one operation should start later.

@@ -7,7 +7,7 @@ status: stable
 sources:
   - resource: https://github.com/kitlangton/skills/blob/main/skills/effect/references/TESTING.md
     id: effect-skill
-    title: kitlangton/skills — Effect skill
+    title: kitlangton/skills, Effect skill
     author: kitlangton
 ---
 
@@ -35,7 +35,7 @@ it.effect("finds a user", () =>
 )
 ```
 
-## Synchronization Instead Of Sleeps
+## Synchronization instead of sleeps
 
 - Use `Deferred` for one-shot readiness/completion signals.
 - Use `Queue` for handing test-controlled work or observed events across fibers.
@@ -66,7 +66,7 @@ it.effect("publishes exactly once", () =>
 )
 ```
 
-## First-Class App Test Stubs
+## First-class app test stubs
 
 Use `TestInterface extends Interface`, `TestService`, and `testLayer` for reusable/stateful fakes.
 
@@ -124,7 +124,7 @@ Guidance:
 - Use `Layer.succeed` for complete dead-simple static test implementations.
 - Use `Layer.mock` only for tiny local partial mocks where omitted members should fail loudly if used.
 
-## Config In Tests
+## Config in tests
 
 Use `ConfigProvider.layer(ConfigProvider.fromUnknown(...))` when the test should exercise Config decoding.
 
