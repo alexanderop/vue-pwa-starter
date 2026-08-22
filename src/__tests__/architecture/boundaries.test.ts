@@ -60,7 +60,10 @@ describe('feature isolation', () => {
 
 describe('shared layers', () => {
   it.each([
-    ['src/components/AppShell.vue', sfc(`import { x } from '@/features/notes/atoms'\nvoid x`)],
+    [
+      'src/components/organisms/OrganismAppShell.vue',
+      sfc(`import { x } from '@/features/notes/atoms'\nvoid x`),
+    ],
     ['src/composables/useThing.ts', `export { x } from '@/features/notes/atoms'\n`],
     ['src/stores/thing.ts', `export { x } from '@/features/notes/atoms'\n`],
     ['src/lib/thing.ts', `export { x } from '@/features/notes/atoms'\n`],
@@ -81,7 +84,7 @@ describe('shared layers', () => {
 describe('db encapsulation', () => {
   it.each([
     'src/features/notes/atoms.ts',
-    'src/components/AppShell.vue',
+    'src/components/organisms/OrganismAppShell.vue',
     'src/composables/useThing.ts',
     'src/stores/thing.ts',
     'src/views/SettingsView.vue',
@@ -260,14 +263,14 @@ void pick`),
 })
 
 /**
- * The same encapsulation argument as `db`, applied to the UI layer:
- * `src/components/ui/*` wraps reka-ui in our own primitives, and the rest of
- * the app talks to the wrappers. See docs/ui-components.md.
+ * The same encapsulation argument as `db`, applied to the primitives: the
+ * atoms and the compound directories wrap reka-ui in our own parts, and the
+ * rest of the app talks to the wrappers. See docs/ui-components.md.
  */
 describe('ui encapsulation', () => {
   it.each([
     'src/views/SettingsView.vue',
-    'src/components/AppShell.vue',
+    'src/components/organisms/OrganismAppShell.vue',
     'src/features/notes/components/NoteCard.vue',
   ])('rejects %s importing reka-ui directly', async (filePath) => {
     const rules = await lint(filePath, sfc(`import { DialogRoot } from 'reka-ui'\nvoid DialogRoot`))
@@ -282,10 +285,12 @@ describe('ui encapsulation', () => {
     expect(rules).toContain(RULE)
   })
 
-  it('rejects reaching past a primitive barrel', async () => {
+  it('rejects reaching past a compound primitive’s barrel', async () => {
     const rules = await lint(
       'src/views/SettingsView.vue',
-      sfc(`import Button from '@/components/ui/button/Button.vue'\nvoid Button`),
+      sfc(
+        `import Content from '@/components/molecules/dialog/MoleculeDialogContent.vue'\nvoid Content`,
+      ),
     )
     expect(rules).toContain(RULE)
   })
@@ -293,14 +298,42 @@ describe('ui encapsulation', () => {
   it('allows the barrel', async () => {
     const rules = await lint(
       'src/views/SettingsView.vue',
-      sfc(`import { Button } from '@/components/ui/button'\nvoid Button`),
+      sfc(
+        `import { MoleculeDialogContent } from '@/components/molecules/dialog'\nvoid MoleculeDialogContent`,
+      ),
     )
     expect(rules).not.toContain(RULE)
   })
 
+  // An atom has no barrel to reach past: it is one file, imported the way any
+  // other component is. docs/atomic-design.md.
+  it('allows importing an atom by its file', async () => {
+    const rules = await lint(
+      'src/views/SettingsView.vue',
+      sfc(`import AtomButton from '@/components/atoms/AtomButton.vue'\nvoid AtomButton`),
+    )
+    expect(rules).not.toContain(RULE)
+  })
+
+  it('lets an atom use cva — a flat file is still a primitive', async () => {
+    const rules = await lint(
+      'src/components/atoms/AtomButton.vue',
+      sfc(`import { cva } from 'class-variance-authority'\nvoid cva`),
+    )
+    expect(rules).not.toContain(RULE)
+  })
+
+  it('keeps an atom out of app state', async () => {
+    const rules = await lint(
+      'src/components/atoms/AtomButton.vue',
+      sfc(`import { useToastStore } from '@/stores/toast'\nvoid useToastStore`),
+    )
+    expect(rules).toContain(RULE)
+  })
+
   it('lets a primitive use reka-ui and cva — that is what the layer is for', async () => {
     const rules = await lint(
-      'src/components/ui/dialog/DialogTitle.vue',
+      'src/components/molecules/dialog/MoleculeDialogTitle.vue',
       sfc(`import { DialogTitle } from 'reka-ui'\nvoid DialogTitle`),
     )
     expect(rules).not.toContain(RULE)
@@ -308,7 +341,7 @@ describe('ui encapsulation', () => {
 
   it('keeps a primitive out of the data layer', async () => {
     const rules = await lint(
-      'src/components/ui/dialog/DialogContent.vue',
+      'src/components/molecules/dialog/MoleculeDialogContent.vue',
       sfc(`import { listNotes } from '@/db'\nvoid listNotes`),
     )
     expect(rules).toContain(RULE)
@@ -316,7 +349,7 @@ describe('ui encapsulation', () => {
 
   it('keeps a primitive out of app state', async () => {
     const rules = await lint(
-      'src/components/ui/dialog/DialogContent.vue',
+      'src/components/molecules/dialog/MoleculeDialogContent.vue',
       sfc(`import { useToastStore } from '@/stores/toast'\nvoid useToastStore`),
     )
     expect(rules).toContain(RULE)
@@ -324,8 +357,72 @@ describe('ui encapsulation', () => {
 
   it('still lets a primitive use a composable', async () => {
     const rules = await lint(
-      'src/components/ui/dialog/DialogContent.vue',
+      'src/components/molecules/dialog/MoleculeDialogContent.vue',
       sfc(`import { useTouchDevice } from '@/composables/useTouchDevice'\nvoid useTouchDevice`),
+    )
+    expect(rules).not.toContain(RULE)
+  })
+})
+
+/**
+ * The atomic tiers — the lint half.
+ *
+ * `atomicDesign.test.ts` walks the real tree and resolves relative imports,
+ * which is what catches `../organisms/AppShell.vue` from inside `molecules/`;
+ * ESLint matches the specifier, which is what catches the same violation
+ * written the way people actually write it, in a .vue file, before a test run.
+ * See docs/atomic-design.md.
+ */
+describe('atomic tiers point one way', () => {
+  it.each([
+    ['src/components/atoms/AtomButton.vue', '@/components/molecules/dialog'],
+    ['src/components/atoms/AtomButton.vue', '@/components/organisms/OrganismAppShell.vue'],
+    [
+      'src/components/molecules/MoleculePageHeader.vue',
+      '@/components/organisms/OrganismAppShell.vue',
+    ],
+    [
+      'src/components/molecules/dialog/MoleculeDialogContent.vue',
+      '@/components/templates/TemplatePageLayout.vue',
+    ],
+    [
+      'src/components/organisms/OrganismAppShell.vue',
+      '@/components/templates/TemplatePageLayout.vue',
+    ],
+  ])('rejects %s importing %s', async (filePath, specifier) => {
+    const rules = await lint(filePath, sfc(`import X from '${specifier}'\nvoid X`))
+    expect(rules).toContain(RULE)
+  })
+
+  it.each([
+    ['src/components/molecules/MoleculePageHeader.vue', '@/components/atoms/AtomButton.vue'],
+    ['src/components/organisms/OrganismPwaInstallDialog.vue', '@/components/molecules/dialog'],
+    [
+      'src/components/templates/TemplatePageLayout.vue',
+      '@/components/molecules/MoleculePageHeader.vue',
+    ],
+    // Same tier is composition, not a leak — PwaInstallPrompt opens the dialog.
+    [
+      'src/components/organisms/OrganismPwaInstallPrompt.vue',
+      '@/components/organisms/OrganismPwaInstallDialog.vue',
+    ],
+  ])('allows %s importing %s', async (filePath, specifier) => {
+    const rules = await lint(filePath, sfc(`import { X } from '${specifier}'\nvoid X`))
+    expect(rules).not.toContain(RULE)
+  })
+
+  it('keeps a composite out of the features it is shared by', async () => {
+    const rules = await lint(
+      'src/components/organisms/OrganismAppShell.vue',
+      sfc(`import { notesAtom } from '@/features/notes/atoms'\nvoid notesAtom`),
+    )
+    expect(rules).toContain(RULE)
+  })
+
+  it('still lets a composite read a store — that is what makes it a composite', async () => {
+    const rules = await lint(
+      'src/components/molecules/MoleculeToastViewport.vue',
+      sfc(`import { useToastStore } from '@/stores/toast'\nvoid useToastStore`),
     )
     expect(rules).not.toContain(RULE)
   })

@@ -42,7 +42,7 @@ function writeInset(inset: ShallowRef<number>, target: VisualViewport): void {
 /**
  * Tracks the on-screen keyboard height as a `--keyboard-inset` CSS variable
  * on <html>. Bottom sheets position themselves above the keyboard with
- * `bottom: var(--keyboard-inset, 0px)` — see ui/dialog/DialogContent.vue.
+ * `bottom: var(--keyboard-inset, 0px)` — see molecules/dialog/MoleculeDialogContent.vue.
  *
  * Call once from App.vue. The CSS variable is the product; the returned
  * `inset` is the same number without a `getComputedStyle` round-trip, and is

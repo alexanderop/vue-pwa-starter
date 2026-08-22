@@ -5,7 +5,7 @@ import { it } from '../fixtures'
  * The 44px floor, asserted where it is actually observable.
  *
  * Sizing in this app is written touch-first and collapsed for a fine pointer
- * (`h-touch-target … pointer-fine:h-10`, see src/components/ui/button/index.ts),
+ * (`h-touch-target … pointer-fine:h-10`, see src/components/atoms/AtomButton.vue),
  * so on every other browser tier the collapsed value is what renders — a
  * desktop Chromium matches `pointer: fine`. That makes this the one tier that
  * measures what a phone gets, and the reason it exists as its own project

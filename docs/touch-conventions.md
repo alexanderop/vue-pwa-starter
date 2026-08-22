@@ -30,7 +30,7 @@ behind `@media (hover: hover)`, so on a phone those styles never fire at
 all, and a button whose only feedback is a `hover:` answers a tap with nothing.
 
 ```ts
-// src/components/ui/button/index.ts, the base, not a variant
+// src/components/atoms/AtomButton.vue, the base, not a variant
 'select-none touch-manipulation transition-[color,background-color,box-shadow,transform] duration-100 active:scale-[0.97]'
 ```
 
@@ -146,7 +146,7 @@ too, not only the bottom one.
 **Where the inset goes is a layout decision, not a habit.** The obvious home is
 the scroll container, and it is wrong here: a sticky element's constraint
 rectangle is the _scrollport_, meaning the scroll container's padding box, so
-`padding-top` on `<main>` would not push `PageHeader`'s `sticky top-0` down.
+`padding-top` on `<main>` would not push `MoleculePageHeader`'s `sticky top-0` down.
 The header would stick flush to the top of `<main>` and slide under the status
 bar. The inset goes on the shell root, where it is one declaration, correct
 with or without a sticky header, and impossible to double-pay.
@@ -160,7 +160,7 @@ and in the meantime do not let a comment promise it either.
 
 `reka-ui` ships a `Drawer` (`DrawerHandle`, `DrawerSwipeArea`, snap points,
 velocity dismissal) and it is already in `node_modules`; migrating
-`DialogContent` to it is the real fix and is an API change rather than a CSS
+`MoleculeDialogContent` to it is the real fix and is an API change rather than a CSS
 one.
 
 ## What no tier can tell you
@@ -186,13 +186,13 @@ mechanism works, one static rule that it is applied everywhere. Neither
 substitutes for the other. A per-control spec does not scale to the next
 control someone adds, and a static rule does not prove the mechanism.
 
-| Convention             | Behavioral                                   | Static                                  |
-| ---------------------- | -------------------------------------------- | --------------------------------------- |
-| Press feedback         | none, see below                              | `architecture/touchConventions.test.ts` |
-| Touch-first sizing     | `touch/touchTargets.spec.ts`                 | the same file, for the button base      |
-| Selection and callouts | `components/touchConventions.spec.ts`        | none                                    |
-| Clamped insets         | `components/ui/dialog/dialogContent.spec.ts` | `architecture/touchConventions.test.ts` |
-| Reduced motion         | none                                         | presence check, and it says so          |
+| Convention             | Behavioral                                          | Static                                  |
+| ---------------------- | --------------------------------------------------- | --------------------------------------- |
+| Press feedback         | none, see below                                     | `architecture/touchConventions.test.ts` |
+| Touch-first sizing     | `touch/touchTargets.spec.ts`                        | the same file, for the button base      |
+| Selection and callouts | `components/touchConventions.spec.ts`               | none                                    |
+| Clamped insets         | `components/molecules/dialog/dialogContent.spec.ts` | `architecture/touchConventions.test.ts` |
+| Reduced motion         | none                                                | presence check, and it says so          |
 
 Press feedback gets no behavioral test on purpose. `:active` is UA-driven and
 cannot be dispatched (`userEvent` has `click`, `dblClick` and `hover` but no

@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest'
-import { it } from '../fixtures'
+import { it } from '../../fixtures'
 import { INSTALL_HINT_STORAGE_KEY } from '@/composables/useInstallPrompt'
-import { stubInstallPromptAvailable } from '../helpers/installEvent'
+import { stubInstallPromptAvailable } from '../../helpers/installEvent'
 
 /**
  * The install hint, driven the way the browser drives it: a

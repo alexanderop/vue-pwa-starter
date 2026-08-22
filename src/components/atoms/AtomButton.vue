@@ -1,7 +1,10 @@
+<script setup lang="ts">
 import type { VariantProps } from 'class-variance-authority'
+import type { PrimitiveProps } from 'reka-ui'
+import type { HTMLAttributes } from 'vue'
 import { cva } from 'class-variance-authority'
-
-export { default as Button } from './Button.vue'
+import { Primitive } from 'reka-ui'
+import { cn } from '@/lib/utils'
 
 /**
  * The base answers a tap, which `hover:` cannot: Tailwind v4 gates every
@@ -25,7 +28,7 @@ export { default as Button } from './Button.vue'
  * `pointer-fine:` compiles natively in Tailwind 4 — no config, no
  * `@custom-variant`. See docs/touch-conventions.md.
  */
-export const buttonVariants = cva(
+const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium select-none touch-manipulation transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.97] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
   {
     variants: {
@@ -50,4 +53,32 @@ export const buttonVariants = cva(
   },
 )
 
-export type ButtonVariants = VariantProps<typeof buttonVariants>
+type ButtonVariants = VariantProps<typeof buttonVariants>
+
+interface Props extends PrimitiveProps {
+  variant?: ButtonVariants['variant']
+  size?: ButtonVariants['size']
+  class?: HTMLAttributes['class']
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  as: 'button',
+})
+
+defineSlots<{
+  default: () => unknown
+}>()
+</script>
+
+<template>
+  <Primitive
+    data-slot="button"
+    :data-variant="props.variant"
+    :data-size="props.size"
+    :as="props.as"
+    :as-child="props.asChild"
+    :class="cn(buttonVariants({ variant: props.variant, size: props.size }), props.class)"
+  >
+    <slot />
+  </Primitive>
+</template>

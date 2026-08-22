@@ -6,14 +6,14 @@ import { render } from 'vitest-browser-vue'
 import { describe, expect } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import AppShell from '@/components/AppShell.vue'
+import OrganismAppShell from '@/components/organisms/OrganismAppShell.vue'
 import { i18n } from '@/i18n'
 import type { NavItem } from '@/types/navigation'
-import { it as base } from '../fixtures'
+import { it as base } from '../../fixtures'
 
 const Stub = defineComponent({ render: () => h('div', 'stub view') })
 
-/** Mirrors AppShell's own `defineSlots`, so a renamed slot fails here too. */
+/** Mirrors OrganismAppShell's own `defineSlots`, so a renamed slot fails here too. */
 type ShellSlots = { default: () => VNode; 'center-action'?: () => VNode }
 
 function makeRouter(): Router {
@@ -51,14 +51,14 @@ const it = base.extend('renderShell', async ({}, { onCleanup }) => {
     await router.isReady()
 
     // The center-action slot is filled or absent, never present-and-empty:
-    // AppShell branches on `$slots['center-action']`, so an empty function
+    // OrganismAppShell branches on `$slots['center-action']`, so an empty function
     // would test the wrong side of that branch.
     const slots: ShellSlots = { default: () => h('div', 'page content') }
     if (withCenterAction) {
       slots['center-action'] = () => h('button', { type: 'button' }, 'center')
     }
 
-    mounted = render(AppShell, {
+    mounted = render(OrganismAppShell, {
       props: { items },
       slots,
       global: { plugins: [i18n, router] },
@@ -68,7 +68,7 @@ const it = base.extend('renderShell', async ({}, { onCleanup }) => {
   }
 })
 
-describe('AppShell', () => {
+describe('OrganismAppShell', () => {
   it('renders the tabs and marks the active route with aria-current', async ({ renderShell }) => {
     await renderShell('/')
 

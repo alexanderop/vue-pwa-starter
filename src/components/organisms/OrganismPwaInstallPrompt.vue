@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
+import AtomButton from '@/components/atoms/AtomButton.vue'
 import { useInstallPrompt } from '@/composables/useInstallPrompt'
 import { usePwaUpdate } from '@/composables/usePwaUpdate'
 
 /**
  * "Install this app" banner, shown once per browser until it is acted on.
  *
- * A banner rather than a toast: ToastViewport is for ephemeral confirmations
+ * A banner rather than a toast: MoleculeToastViewport is for ephemeral confirmations
  * — a string, three seconds, no actions — and this needs to wait for a
- * decision and offer two. It borrows the shape of PwaUpdatePrompt.vue
+ * decision and offer two. It borrows the shape of MoleculePwaUpdatePrompt.vue
  * instead, which is already the worked example of a persistent, actionable
  * strip sitting above the tab bar.
  *
@@ -20,7 +20,9 @@ import { usePwaUpdate } from '@/composables/usePwaUpdate'
  * the install hint mostly fires on a first one — but "rarely" is not "never",
  * and two stacked banners is a worse bug than a hint that waits a reload.
  */
-const InstallDialog = defineAsyncComponent(() => import('./PwaInstallDialog.vue'))
+const OrganismPwaInstallDialog = defineAsyncComponent(
+  () => import('./OrganismPwaInstallDialog.vue'),
+)
 
 const { t } = useI18n()
 const { hintVisible, dismissHint } = useInstallPrompt()
@@ -42,7 +44,7 @@ function openDialog(): void {
 <template>
   <!-- The live region stays mounted so screen readers are already observing it
        when the banner appears; a region created together with its content is
-       not announced. Same pattern as PwaUpdatePrompt.vue. -->
+       not announced. Same pattern as MoleculePwaUpdatePrompt.vue. -->
   <div role="status" aria-live="polite" aria-atomic="true">
     <div
       v-if="bannerVisible"
@@ -53,15 +55,15 @@ function openDialog(): void {
         <p class="text-sm text-muted-foreground">{{ t('pwa.install.banner.body') }}</p>
       </div>
       <div class="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" @click="dismissHint">
+        <AtomButton variant="ghost" size="sm" @click="dismissHint">
           {{ t('pwa.install.banner.later') }}
-        </Button>
-        <Button size="sm" @click="openDialog">
+        </AtomButton>
+        <AtomButton size="sm" @click="openDialog">
           {{ t('pwa.install.banner.action') }}
-        </Button>
+        </AtomButton>
       </div>
     </div>
   </div>
 
-  <InstallDialog v-if="dialogRequested" v-model:open="dialogOpen" />
+  <OrganismPwaInstallDialog v-if="dialogRequested" v-model:open="dialogOpen" />
 </template>

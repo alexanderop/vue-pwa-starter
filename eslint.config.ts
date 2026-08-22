@@ -71,28 +71,87 @@ const NO_DB_INTERNALS = {
 }
 
 /**
- * The UI layer, enforced the same way as the db layer.
+ * The component tree, tiered by atomic design, and enforced the same way as
+ * the db layer.
  *
- * `src/components/ui/*` holds shadcn-style primitives: our components, our
- * classes, wrapping reka-ui's headless behaviour. reka-ui and cva are the
- * substrate those wrappers are built from, not an API the app codes against
- * — an app component reaching for `<DialogContent>` straight from reka-ui
- * gets no `data-slot`, none of our styling, and no single place to restyle
- * later. Same reasoning as the db rule above: one public surface per layer.
+ * `src/components/<tier>/` is one directory per tier, and there are exactly
+ * two shapes:
  *
- * See docs/ui-components.md for the pattern these rules protect.
+ * - a **primitive** — everything in `atoms/`, plus a directory with an
+ *   `index.ts` barrel in any tier (`molecules/dialog/`, the compound form).
+ *   These are the shadcn-style wrappers over reka-ui: presentational, no db,
+ *   no stores, no feature.
+ * - a **composite** — a flat `.vue` in a tier above atoms
+ *   (`molecules/MoleculePageHeader.vue`, `organisms/OrganismAppShell.vue`).
+ *   Ordinary app components, which may read a store or a composable, and
+ *   which compose primitives rather than wrap reka.
+ *
+ * reka-ui and cva are the substrate a primitive is built from, not an API the
+ * app codes against — an app component reaching for `<DialogContent>` straight
+ * from reka-ui gets no `data-slot`, none of our styling, and no single place
+ * to restyle later. Same reasoning as the db rule above: one public surface
+ * per layer.
+ *
+ * The tiers are in docs/atomic-design.md; how a primitive is written is in
+ * docs/ui-components.md.
+ *
+ * Exported because `src/__tests__/architecture/atomicDesign.test.ts` asserts
+ * what ESLint cannot: that every shared component sits in exactly one of
+ * these, and that the direction below holds for a relative import too.
  */
+export const TIERS = ['atoms', 'molecules', 'organisms', 'templates'] as const
+
+type Tier = (typeof TIERS)[number]
+
+/**
+ * The primitives: every atom, plus the parts of a compound primitive — a
+ * directory with a barrel, in whichever tier it was filed. An atom is
+ * presentational and works on props alone, which is the primitive contract
+ * itself, so `atoms/` has no composite half.
+ */
+const primitiveFiles = (tier: Tier): string[] => [
+  `src/components/${tier}/*/${SOURCES}`,
+  ...(tier === 'atoms' ? [`src/components/atoms/${SOURCES}`] : []),
+]
+
+/** The composites: a flat `.vue` sitting directly in a tier above atoms. */
+const compositeFiles = (tier: Tier): string[] =>
+  tier === 'atoms' ? [] : [`src/components/${tier}/*.vue`]
+
 const NO_HEADLESS_DIRECT = {
   group: ['reka-ui', 'reka-ui/**', 'class-variance-authority', 'class-variance-authority/**'],
   message:
-    'reka-ui and cva are the private substrate of src/components/ui/*. Import the wrapped primitive from its barrel (@/components/ui/<name>) instead, or add the primitive there first — docs/ui-components.md.',
+    'reka-ui and cva are the private substrate of the primitives (src/components/atoms/, and a compound primitive directory in any tier). Import the wrapped primitive instead (@/components/atoms/AtomButton.vue, @/components/molecules/dialog), or add the primitive there first — docs/ui-components.md.',
 }
 
-/** Each primitive directory has one door: its index.ts. */
+/** Each compound primitive has one door: its index.ts. */
 const NO_UI_INTERNALS = {
-  group: ['**/components/ui/*/*'],
+  group: TIERS.map((tier) => `**/components/${tier}/*/*`),
   message:
-    'Import a primitive from its barrel (@/components/ui/dialog), not from the file inside it — the barrel is what keeps a part swappable.',
+    'Import a primitive from its barrel (@/components/molecules/dialog), not from the file inside it — the barrel is what keeps a part swappable.',
+}
+
+/**
+ * Atomic design points one way. Atoms compose into molecules, molecules into
+ * organisms, organisms into templates, and a template is placed by a view.
+ *
+ * An import going the other way is the tier collapsing: the moment `AtomButton`
+ * knows about `OrganismAppShell`, it can only be used where an app shell
+ * exists, and the tier it was filed under stops meaning anything. A same-tier
+ * import is fine — that is composition, and it is how
+ * `OrganismPwaInstallPrompt` opens `OrganismPwaInstallDialog`.
+ */
+const noHigherTiers = (tier: Tier) => {
+  const above = TIERS.slice(TIERS.indexOf(tier) + 1)
+  if (above.length === 0) return []
+  const named =
+    above.length === 1 ? above[0] : `${above.slice(0, -1).join(', ')} or ${above.at(-1)}`
+  return [
+    {
+      group: above.flatMap((higher) => [`**/components/${higher}`, `**/components/${higher}/**`]),
+      message: `${tier} may not import ${named} — atomic design points one way, so a lower tier never depends on the layout it happens to sit in. Move the shared part down a tier, or move this component up. docs/atomic-design.md.`,
+    },
+  ]
 }
 
 /**
@@ -102,8 +161,61 @@ const NO_UI_INTERNALS = {
 const NO_SHADCN = {
   group: ['shadcn-vue', 'shadcn-vue/**', 'radix-vue', 'radix-vue/**'],
   message:
-    'This project writes its own primitives in the shadcn-vue style rather than depending on it — copy the pattern into src/components/ui/ instead. docs/ui-components.md.',
+    'This project writes its own primitives in the shadcn-vue style rather than depending on it — copy the pattern into src/components/ instead. docs/ui-components.md.',
 }
+
+/**
+ * The same boundary as NO_HEADLESS_DIRECT, one level down: the raw HTML
+ * elements a primitive already wraps.
+ *
+ * `no-restricted-imports` stops an app component reaching past `AtomButton`
+ * to reka-ui. It cannot stop the cheaper way around, which is to skip the
+ * primitive entirely and write `<button>` — no import to restrict, so nothing
+ * fires. That is the version that actually happens, and it is the more
+ * expensive one: `buttonVariants` carries the 44px touch floor, the
+ * `active:scale` press feedback, `touch-manipulation`, and the focus ring
+ * (see the comment above `buttonVariants` in AtomButton.vue, every line of it
+ * hard-won). A bare `<button>` has none of them and looks fine on a desktop
+ * review.
+ *
+ * Only elements a primitive genuinely owns are listed. `<select>` is absent
+ * because there is no AtomSelect to send anyone to — add the element here the
+ * day the primitive exists, not before.
+ */
+const WRAPPED_ELEMENTS = [
+  {
+    element: 'button',
+    primitive: 'AtomButton',
+    loses: 'the 44px touch floor, the active:scale press, touch-manipulation and the focus ring',
+  },
+  {
+    element: 'input',
+    primitive: 'AtomInput',
+    loses: 'the touch-height field, the focus ring and the disabled styling',
+  },
+  {
+    element: 'textarea',
+    primitive: 'AtomTextarea',
+    loses: 'the min-height, the focus ring and the disabled styling',
+  },
+  {
+    element: 'label',
+    primitive: 'AtomLabel',
+    loses: "reka's click-to-focus wiring and the peer-disabled styling",
+  },
+] as const
+
+const NO_RAW_ELEMENTS = WRAPPED_ELEMENTS.map(({ element, primitive, loses }) => ({
+  element,
+  message: `<${element}> is what ${primitive} is for. Use it (@/components/atoms/${primitive}.vue) — writing the element directly loses ${loses}, and none of that is visible in a desktop review. If the primitive genuinely cannot express this case, disable the rule on the line and say which part it cannot express. docs/ui-components.md`,
+}))
+
+/**
+ * Where the raw element is still the right answer: inside the primitives
+ * themselves, which is where the wrapping happens. `AtomInput` writing
+ * `<input>` is the rule working, not the rule failing.
+ */
+const PRIMITIVES = TIERS.flatMap((tier) => primitiveFiles(tier))
 
 /** Primitives are presentational: no data layer, no app state, no features. */
 const NO_APP_STATE = {
@@ -322,7 +434,7 @@ const boundary = (name: string, files: string[], ignores: string[], patterns: Bo
   return ignores.length > 0 ? { ...config, ignores } : config
 }
 
-/** Applies everywhere outside src/components/ui — see NO_HEADLESS_DIRECT. */
+/** Applies everywhere outside a primitive directory — see NO_HEADLESS_DIRECT. */
 const CONSUMES_UI = [NO_HEADLESS_DIRECT, NO_UI_INTERNALS, NO_SHADCN]
 
 const boundaries = [
@@ -339,12 +451,33 @@ const boundaries = [
   boundary('db', [`src/db/${SOURCES}`], [], [NO_FEATURES, ...CONSUMES_UI]),
 
   // The primitives themselves: the one place reka-ui and cva are in scope.
-  boundary('ui-primitives', [`src/components/ui/${SOURCES}`], [], [NO_APP_STATE, NO_SHADCN]),
+  // One scope per tier rather than one for all of them, because the layering
+  // patterns differ per tier and flat config replaces rule options.
+  ...TIERS.map((tier) =>
+    boundary(
+      `components/${tier}/primitives`,
+      primitiveFiles(tier),
+      [],
+      [NO_APP_STATE, NO_UI_INTERNALS, NO_SHADCN, ...noHigherTiers(tier)],
+    ),
+  ),
+
+  // The composites beside them: ordinary app components, which consume the
+  // primitives like the rest of the app does. `atoms/` has none, and a scope
+  // matching no files is a config ESLint would reject.
+  ...TIERS.filter((tier) => compositeFiles(tier).length > 0).map((tier) =>
+    boundary(
+      `components/${tier}`,
+      compositeFiles(tier),
+      [],
+      [NO_FEATURES, NO_DB_INTERNALS, ...CONSUMES_UI, ...noHigherTiers(tier)],
+    ),
+  ),
 
   boundary(
     'shared',
     SHARED_LAYERS.map((folder) => `src/${folder}/${SOURCES}`),
-    ['src/components/ui/**'],
+    ['src/components/**'],
     [NO_FEATURES, NO_DB_INTERNALS, ...CONSUMES_UI],
   ),
 
@@ -429,16 +562,6 @@ export default defineConfigWithVueTs(
     },
   },
 
-  {
-    name: 'app/ui-primitives',
-    files: ['src/components/ui/**/*.vue'],
-    rules: {
-      // shadcn-style primitives are intentionally named after the element
-      // they wrap (Button, Input, Label, …).
-      'vue/multi-word-component-names': 'off',
-    },
-  },
-
   // oxlint runs first (fast, Rust); this disables the ESLint rules it
   // already covers so the two don't double-report.
   ...oxlint.configs['flat/recommended'],
@@ -448,6 +571,23 @@ export default defineConfigWithVueTs(
 
   // --- Architecture boundaries (see the comment at the top of this file) ---
   ...boundaries,
+
+  // --- The template half of the same boundary (see WRAPPED_ELEMENTS above) ---
+  //
+  // This has to be ESLint rather than the oxlint plugin next door: oxlint
+  // hands a JS plugin a .vue file as its `<script>` block alone — no template
+  // nodes, and `sourceCode.getText()` returns the script text only — so a
+  // rule about markup has nothing to look at. vue-eslint-parser parses the
+  // template, so this tier can. docs/oxlint-rules.md says the same thing from
+  // the other side.
+  {
+    name: 'app/no-raw-elements',
+    files: ['src/**/*.vue'],
+    ignores: PRIMITIVES,
+    rules: {
+      'vue/no-restricted-html-elements': ['error', ...NO_RAW_ELEMENTS],
+    },
+  },
 
   // --- Functional core, imperative shell (see CORE / REACTIVE_SHELL above) ---
   //

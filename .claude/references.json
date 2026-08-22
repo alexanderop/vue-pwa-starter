@@ -6,7 +6,7 @@
   },
   "reka-ui": {
     "repository": "unovue/reka-ui",
-    "description": "Reka UI source — the headless behaviour every primitive in src/components/ui/ wraps. packages/core/src/<Name>/ is the authority on what a part accepts, emits, and writes to the DOM (data-state, ARIA wiring, portal and focus handling): read the .vue file's exported *Props / *Emits types rather than recalling an API. docs/content/ holds the per-component usage pages."
+    "description": "Reka UI source — the headless behaviour every primitive under src/components/<tier>/<name>/ wraps. packages/core/src/<Name>/ is the authority on what a part accepts, emits, and writes to the DOM (data-state, ARIA wiring, portal and focus handling): read the .vue file's exported *Props / *Emits types rather than recalling an API. docs/content/ holds the per-component usage pages."
   },
   "shadcn-vue": {
     "repository": "unovue/shadcn-vue",

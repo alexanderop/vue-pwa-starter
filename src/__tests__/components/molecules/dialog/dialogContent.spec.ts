@@ -2,17 +2,22 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { describe, expect } from 'vitest'
 import { defineComponent, h } from 'vue'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import {
+  MoleculeDialog,
+  MoleculeDialogContent,
+  MoleculeDialogDescription,
+  MoleculeDialogTitle,
+} from '@/components/molecules/dialog'
 import { i18n } from '@/i18n'
 import { it as base } from '../../../fixtures'
 
 /** A sheet with more content than a keyboard-shrunk viewport can show. */
 const Harness = defineComponent({
   render: () =>
-    h(Dialog, { open: true, modal: false }, () => [
-      h(DialogContent, null, () => [
-        h(DialogTitle, () => 'Tall sheet'),
-        h(DialogDescription, () => 'Scroll me'),
+    h(MoleculeDialog, { open: true, modal: false }, () => [
+      h(MoleculeDialogContent, null, () => [
+        h(MoleculeDialogTitle, () => 'Tall sheet'),
+        h(MoleculeDialogDescription, () => 'Scroll me'),
         ...Array.from({ length: 30 }, (_, index) => h('p', `line ${index}`)),
         h('button', { type: 'button' }, 'Save'),
       ]),
@@ -53,7 +58,7 @@ const it = base.extend('tallSheet', async ({}, { onCleanup }) => {
   }
 })
 
-describe('DialogContent', () => {
+describe('MoleculeDialogContent', () => {
   it('scrolls its content when the keyboard shrinks the viewport', async ({ tallSheet }) => {
     await expect.element(page.getByText('Tall sheet')).toBeVisible()
 

@@ -5,7 +5,7 @@ import { DialogClose } from 'reka-ui'
 /**
  * Closes the nearest `<Dialog>`. It reads the open state from the provider,
  * not from a parent prop, so it works wherever the consumer puts it — in the
- * footer, pinned to a corner, or outside `<DialogContent>` entirely.
+ * footer, pinned to a corner, or outside `<MoleculeDialogContent>` entirely.
  */
 const props = defineProps<DialogCloseProps>()
 

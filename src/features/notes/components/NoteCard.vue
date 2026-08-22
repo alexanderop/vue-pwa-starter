@@ -2,7 +2,7 @@
 import { Pin, PinOff, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
+import AtomButton from '@/components/atoms/AtomButton.vue'
 import type { Note } from '@/db'
 import { useNoteAge } from '../useNoteAge'
 
@@ -50,7 +50,7 @@ const ageLabel = computed(() => {
       </div>
       <!-- Per-row actions carry the note title in their accessible name so
            screen-reader users can tell rows apart. -->
-      <Button
+      <AtomButton
         variant="ghost"
         size="icon"
         :aria-label="
@@ -62,15 +62,15 @@ const ageLabel = computed(() => {
       >
         <PinOff v-if="note.pinned" />
         <Pin v-else />
-      </Button>
-      <Button
+      </AtomButton>
+      <AtomButton
         variant="ghost"
         size="icon"
         :aria-label="t('notes.actions.delete', { title: note.title })"
         @click="emit('delete')"
       >
         <Trash2 />
-      </Button>
+      </AtomButton>
     </div>
   </article>
 </template>

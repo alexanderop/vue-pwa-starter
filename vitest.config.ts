@@ -74,7 +74,7 @@ const coverageConfig = {
   provider: 'v8' as const,
   reporter: ['text-summary', 'html', 'lcov'],
   include: ['src/**/*.{ts,vue}'],
-  exclude: ['src/**/*.d.ts', 'src/__tests__/**', 'src/components/ui/**'],
+  exclude: ['src/**/*.d.ts', 'src/__tests__/**', 'src/components/*/*/**'],
 }
 
 export default defineConfig({

@@ -71,6 +71,7 @@ function navigate(routeName: string): void {
       class="border-t bg-card safe-area-bottom"
     >
       <div class="flex justify-around">
+        <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomButton cannot express a nav tab: `buttonVariants` is `inline-flex` with `gap-2 rounded-md`, the tab is a `flex-1 flex-col` column, and the base's `[&_svg:not([class*='size-'])]:size-4` would shrink the 24px lucide icon, which sets its size as an attribute rather than a class. Wants a `nav` variant on the atom, not an override here. -->
         <button
           v-for="item in leftItems"
           :key="item.routeName"
@@ -90,6 +91,7 @@ function navigate(routeName: string): void {
 
         <slot name="center-action" />
 
+        <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomButton cannot express a nav tab: `buttonVariants` is `inline-flex` with `gap-2 rounded-md`, the tab is a `flex-1 flex-col` column, and the base's `[&_svg:not([class*='size-'])]:size-4` would shrink the 24px lucide icon, which sets its size as an attribute rather than a class. Wants a `nav` variant on the atom, not an override here. -->
         <button
           v-for="item in rightItems"
           :key="item.routeName"

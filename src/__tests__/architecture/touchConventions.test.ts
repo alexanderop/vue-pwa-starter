@@ -17,7 +17,7 @@
  * control that ships mouse-only — and that is exactly what a static rule
  * catches.
  *
- * Deliberately text-level rather than a full parse, like `uiPrimitives.test.ts`,
+ * Deliberately text-level rather than a full parse, like `primitives.test.ts`,
  * and every helper below is exercised against a synthetic violation as well as
  * the real tree — a rule that only ever sees passing input is not a rule.
  */
@@ -335,9 +335,9 @@ describe('new controls cannot ship hover-only', () => {
 
   it('the button base answers a press', () => {
     // The primitive every feature reaches for, and the one place a missing
-    // active: would be invisible above — its variants live in a .ts table,
-    // not in a template. Part of the contract in docs/ui-components.md.
-    const base = readFileSync(`${SOURCE_ROOT}components/ui/button/index.ts`, 'utf8')
+    // active: would be invisible above — its variants live in a cva table in
+    // the script block, not in a template. Contract: docs/ui-components.md.
+    const base = readFileSync(`${SOURCE_ROOT}components/atoms/AtomButton.vue`, 'utf8')
     expect(base, 'the button base no longer carries a press state').toMatch(/active:scale-/)
     expect(base, 'the button base no longer suppresses double-tap zoom').toContain(
       'touch-manipulation',

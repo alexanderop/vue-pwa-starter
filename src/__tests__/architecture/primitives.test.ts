@@ -1,7 +1,13 @@
 /**
- * The shape rules for `src/components/ui/*`, which ESLint cannot express.
+ * The shape rules for a primitive, which ESLint cannot express.
  *
- * eslint.config.ts already guards the *imports* around the UI layer — reka-ui
+ * A primitive is an atom (`src/components/atoms/AtomButton.vue`) or a part of
+ * a compound primitive — a directory with a barrel, in whichever tier it was
+ * filed (`src/components/molecules/dialog/`). A composite is the flat `.vue`
+ * beside a compound one in a tier above atoms. docs/atomic-design.md draws
+ * that line; this file grades everything on the primitive side of it.
+ *
+ * eslint.config.ts already guards the *imports* around that layer — reka-ui
  * and cva stay inside it, app code enters through a barrel. What it cannot
  * see is whether a primitive is actually written in the shadcn style once you
  * are inside the file: whether it exposes the four levers a consumer needs
@@ -14,43 +20,72 @@
  * as well as the real tree — a rule that only ever sees passing input is not
  * a rule.
  */
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { TIERS } from '../../../eslint.config'
 
-const UI_DIR = fileURLToPath(new URL('../../components/ui/', import.meta.url))
+const COMPONENTS_DIR = fileURLToPath(new URL('../../components/', import.meta.url))
 
 /** At most this many configuration props beyond `class` before it is sprawl. */
 const MAX_CONFIG_PROPS = 3
 
 interface Primitive {
-  /** e.g. `dialog/DialogContent.vue` */
+  /** e.g. `atoms/AtomButton.vue`, `molecules/dialog/MoleculeDialogContent.vue` */
   id: string
-  directory: string
+  /** The compound primitive it is a part of, or undefined for an atom. */
+  directory?: string
   file: string
   source: string
 }
 
-function readPrimitives(): Primitive[] {
-  return readdirSync(UI_DIR, { withFileTypes: true })
+const directoriesIn = (path: string): string[] =>
+  readdirSync(path, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .flatMap((directory) =>
-      readdirSync(join(UI_DIR, directory.name), { withFileTypes: true })
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.vue'))
-        .map((entry) => ({
-          id: `${directory.name}/${entry.name}`,
-          directory: directory.name,
-          file: entry.name,
-          source: readFileSync(join(UI_DIR, directory.name, entry.name), 'utf8'),
-        })),
-    )
+    .map((entry) => entry.name)
+
+const vueFilesIn = (path: string): string[] =>
+  readdirSync(path, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.vue'))
+    .map((entry) => entry.name)
+
+/**
+ * Every compound primitive, as a path relative to `src/components/`. A tier
+ * with none in it is simply absent from the list — only `molecules/dialog/`
+ * is one today, but nothing stops an organism from being written as a
+ * provider plus parts, and the rules below should grade it when one is.
+ */
+function compoundDirectories(): string[] {
+  return TIERS.filter((tier) => existsSync(join(COMPONENTS_DIR, tier))).flatMap((tier) =>
+    directoriesIn(join(COMPONENTS_DIR, tier)).map((name) => `${tier}/${name}`),
+  )
 }
 
+const read = (directory: string, file: string): Primitive => ({
+  id: `${directory}${file}`,
+  file,
+  source: readFileSync(join(COMPONENTS_DIR, directory, file), 'utf8'),
+})
+
+/** The atoms, plus every part of a compound primitive. */
+function readPrimitives(): Primitive[] {
+  return [
+    ...vueFilesIn(join(COMPONENTS_DIR, 'atoms')).map((file) => read('atoms/', file)),
+    ...DIRECTORIES.flatMap((directory) =>
+      vueFilesIn(join(COMPONENTS_DIR, directory)).map((file) => ({
+        ...read(`${directory}/`, file),
+        directory,
+      })),
+    ),
+  ]
+}
+
+const DIRECTORIES = compoundDirectories()
 const PRIMITIVES = readPrimitives()
-const DIRECTORIES = readdirSync(UI_DIR, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
+const PARTS = PRIMITIVES.filter(
+  (primitive): primitive is Primitive & { directory: string } => primitive.directory !== undefined,
+)
 
 // --- text helpers, exercised against synthetic input further down ----------
 
@@ -166,24 +201,46 @@ export function stylingIsOverridable(source: string): boolean {
 
 // --- the rules ------------------------------------------------------------
 
-describe('the UI layer is a set of primitives', () => {
+describe('a compound primitive is a barrel plus its parts', () => {
   it('finds primitives to check', () => {
     expect(PRIMITIVES.length).toBeGreaterThan(0)
   })
 
   it.each(DIRECTORIES)('%s has a barrel', (directory) => {
-    const entries = readdirSync(join(UI_DIR, directory)).filter((name) => name !== '.DS_Store')
-    expect(entries, `src/components/ui/${directory} needs an index.ts`).toContain('index.ts')
+    const entries = readdirSync(join(COMPONENTS_DIR, directory)).filter(
+      (name) => name !== '.DS_Store',
+    )
+    expect(entries, `src/components/${directory} needs an index.ts`).toContain('index.ts')
   })
 
-  it.each(PRIMITIVES.map((primitive) => [primitive.id, primitive] as const))(
+  it.each(DIRECTORIES)('%s holds more than one part', (directory) => {
+    const parts = vueFilesIn(join(COMPONENTS_DIR, directory))
+    expect(
+      parts.length,
+      `src/components/${directory} is a directory holding one component (${parts.join(', ')}). A directory plus a barrel is the compound form — a provider and the parts that share its state. A single-part primitive is a flat .vue in its tier, the way the atoms are. docs/atomic-design.md`,
+    ).toBeGreaterThan(1)
+  })
+
+  it.each(PARTS.map((primitive) => [primitive.id, primitive] as const))(
     '%s is exported from its barrel',
     (_id, primitive) => {
-      const barrel = readFileSync(join(UI_DIR, primitive.directory, 'index.ts'), 'utf8')
+      const barrel = readFileSync(join(COMPONENTS_DIR, primitive.directory, 'index.ts'), 'utf8')
       expect(
         barrel,
-        `add "export { default as … } from './${primitive.file}'" to src/components/ui/${primitive.directory}/index.ts — the barrel is the only door into a primitive`,
+        `add "export { default as … } from './${primitive.file}'" to src/components/${primitive.directory}/index.ts — the barrel is the only door into a primitive`,
       ).toContain(`./${primitive.file}`)
+    },
+  )
+
+  it.each(PARTS.map((primitive) => [primitive.id, primitive] as const))(
+    '%s is exported under its own name',
+    (_id, primitive) => {
+      const barrel = readFileSync(join(COMPONENTS_DIR, primitive.directory, 'index.ts'), 'utf8')
+      const name = primitive.file.replace(/\.vue$/, '')
+      expect(
+        barrel,
+        `src/components/${primitive.directory}/index.ts renames ${name} on the way out. The filename carries the tier prefix precisely so the call site sees it — an alias in the barrel throws that away. docs/atomic-design.md`,
+      ).toContain(`export { default as ${name} } from './${primitive.file}'`)
     },
   )
 })

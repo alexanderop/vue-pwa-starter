@@ -7,7 +7,7 @@ import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from '
 import { useI18n } from 'vue-i18n'
 import { useTouchDevice } from '@/composables/useTouchDevice'
 import { cn } from '@/lib/utils'
-import DialogOverlay from './DialogOverlay.vue'
+import MoleculeDialogOverlay from './MoleculeDialogOverlay.vue'
 
 /**
  * Keyboard-aware dialog content: a bottom sheet on small viewports, a
@@ -65,7 +65,7 @@ function handleOpenAutoFocus(event: Event): void {
 
 <template>
   <DialogPortal>
-    <DialogOverlay />
+    <MoleculeDialogOverlay />
     <!-- No `pb-6` beside `safe-area-bottom`: two utilities declaring
          padding-bottom at equal specificity hand the decision to generated
          stylesheet order, and the one that was winning resolves to 0px on any

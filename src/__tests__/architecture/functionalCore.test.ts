@@ -23,7 +23,7 @@
  * fails loudly instead of drifting.
  *
  * Deliberately text-level rather than a full parse, like `touchConventions.test.ts`
- * and `uiPrimitives.test.ts`, and every helper is exercised against synthetic
+ * and `primitives.test.ts`, and every helper is exercised against synthetic
  * input as well as the real tree.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'

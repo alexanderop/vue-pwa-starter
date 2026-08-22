@@ -22,14 +22,18 @@ const SOURCE_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const A11Y_TIER = fileURLToPath(new URL('../a11y/', import.meta.url))
 
 /**
- * Directories whose `.vue` files are not the app's own screens.
+ * `.vue` files that are not the app's own screens.
  *
- * `components/ui` is the vendored primitive layer (see docs/ui-components.md):
- * shadcn-style wrappers around reka-ui, which no view renders on its own and
- * which every screen sweep already covers transitively. Grading them
- * individually would be grading reka-ui.
+ * A primitive — an atom, or a part of a compound primitive
+ * (`components/<tier>/<name>/`), see docs/atomic-design.md — is the
+ * shadcn-style wrapper layer around reka-ui, which no view renders on its own
+ * and which every screen sweep already covers transitively. Grading those
+ * individually would be grading reka-ui. A composite, the flat `.vue` sitting
+ * in a tier above atoms, is ours and is graded like any other screen part.
  */
-const EXCLUDED = ['components/ui/', '__tests__/']
+const isPrimitive = (file: string): boolean =>
+  file.startsWith('components/atoms/') || /^components\/[^/]+\/[^/]+\//.test(file)
+const isExcluded = (file: string): boolean => file.startsWith('__tests__/') || isPrimitive(file)
 
 function componentFiles(directory: string, prefix = ''): Array<string> {
   const found: Array<string> = []
@@ -44,7 +48,7 @@ function componentFiles(directory: string, prefix = ''): Array<string> {
     }
   }
 
-  return found.filter((file) => !EXCLUDED.some((excluded) => file.startsWith(excluded)))
+  return found.filter((file) => !isExcluded(file))
 }
 
 /** Everything the a11y tier could sweep, as paths relative to `src/`. */

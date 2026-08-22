@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import PageHeader from '@/components/PageHeader.vue'
+import MoleculePageHeader from '@/components/molecules/MoleculePageHeader.vue'
 
 const {
   title,
@@ -30,7 +30,7 @@ defineSlots<{
 
 <template>
   <div class="flex h-full flex-col">
-    <PageHeader
+    <MoleculePageHeader
       :title="title"
       :subtitle="subtitle"
       :back-to="backTo"
@@ -41,7 +41,7 @@ defineSlots<{
       <template #actions>
         <slot name="header-actions" />
       </template>
-    </PageHeader>
+    </MoleculePageHeader>
 
     <!-- `overscroll-contain` for the same reason <main> has it: this is a real
          scroller nested inside another one, so without it reaching the end of

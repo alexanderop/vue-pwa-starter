@@ -3,11 +3,11 @@ import { Download, Smartphone, Upload } from '@lucide/vue'
 import { Effect } from 'effect'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import PageLayout from '@/components/PageLayout.vue'
-import PwaInstallDialog from '@/components/PwaInstallDialog.vue'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import TemplatePageLayout from '@/components/templates/TemplatePageLayout.vue'
+import OrganismPwaInstallDialog from '@/components/organisms/OrganismPwaInstallDialog.vue'
+import AtomButton from '@/components/atoms/AtomButton.vue'
+import AtomLabel from '@/components/atoms/AtomLabel.vue'
+import AtomSwitch from '@/components/atoms/AtomSwitch.vue'
 import { useAtomSet } from '@effect/atom-vue'
 import { useInstallPrompt } from '@/composables/useInstallPrompt'
 import { useLocale } from '@/composables/useLocale'
@@ -112,20 +112,20 @@ async function handleImportFile(event: Event): Promise<void> {
 </script>
 
 <template>
-  <PageLayout :title="t('settings.title')" :show-back="false">
+  <TemplatePageLayout :title="t('settings.title')" :show-back="false">
     <div class="mx-auto flex w-full max-w-lg flex-col gap-section p-4">
       <section class="flex flex-col gap-3">
         <h2 class="text-section-title font-semibold">{{ t('settings.appearance.title') }}</h2>
         <div class="flex min-h-touch-target items-center justify-between rounded-lg border p-4">
-          <Label for="dark-mode-switch">{{ t('settings.appearance.darkMode') }}</Label>
-          <Switch id="dark-mode-switch" v-model="isDark" />
+          <AtomLabel for="dark-mode-switch">{{ t('settings.appearance.darkMode') }}</AtomLabel>
+          <AtomSwitch id="dark-mode-switch" v-model="isDark" />
         </div>
       </section>
 
       <section class="flex flex-col gap-3">
         <h2 class="text-section-title font-semibold">{{ t('settings.language.title') }}</h2>
         <div class="rounded-lg border p-4">
-          <label class="flex flex-col gap-2 text-sm font-medium" for="locale-select">
+          <AtomLabel class="flex flex-col gap-2" for="locale-select">
             {{ t('settings.language.label') }}
             <select
               id="locale-select"
@@ -137,7 +137,7 @@ async function handleImportFile(event: Event): Promise<void> {
                 {{ localeName(code) }}
               </option>
             </select>
-          </label>
+          </AtomLabel>
         </div>
       </section>
 
@@ -155,10 +155,10 @@ async function handleImportFile(event: Event): Promise<void> {
               {{ t('pwa.install.settings.description') }}
             </p>
             <div>
-              <Button variant="outline" @click="installDialogOpen = true">
+              <AtomButton variant="outline" @click="installDialogOpen = true">
                 <Smartphone />
                 {{ t('pwa.install.settings.action') }}
-              </Button>
+              </AtomButton>
             </div>
           </template>
         </div>
@@ -169,14 +169,15 @@ async function handleImportFile(event: Event): Promise<void> {
         <div class="flex flex-col gap-4 rounded-lg border p-4">
           <p class="text-sm text-muted-foreground">{{ t('settings.data.description') }}</p>
           <div class="flex flex-wrap gap-2">
-            <Button variant="outline" @click="handleExport">
+            <AtomButton variant="outline" @click="handleExport">
               <Download />
               {{ t('settings.data.export') }}
-            </Button>
-            <Button variant="outline" @click="fileInput?.click()">
+            </AtomButton>
+            <AtomButton variant="outline" @click="fileInput?.click()">
               <Upload />
               {{ t('settings.data.import') }}
-            </Button>
+            </AtomButton>
+            <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomInput is a `defineModel<string>` text field; a file input has no string value to bind and this one is `hidden` anyway, driven entirely by the button above it. There is nothing here for the primitive to style. -->
             <input
               ref="fileInput"
               type="file"
@@ -189,6 +190,6 @@ async function handleImportFile(event: Event): Promise<void> {
       </section>
     </div>
 
-    <PwaInstallDialog v-model:open="installDialogOpen" />
-  </PageLayout>
+    <OrganismPwaInstallDialog v-model:open="installDialogOpen" />
+  </TemplatePageLayout>
 </template>

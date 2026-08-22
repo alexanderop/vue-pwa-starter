@@ -6,7 +6,7 @@ import { DialogRoot, useForwardPropsEmits } from 'reka-ui'
  * The provider. Renders no DOM of its own — it establishes the dialog
  * context (open state, ids, focus bookkeeping) that every other part of
  * this barrel injects. That is what lets `<DialogClose>` sit anywhere in
- * the tree, including outside `<DialogContent>`.
+ * the tree, including outside `<MoleculeDialogContent>`.
  */
 const props = defineProps<DialogRootProps>()
 const emits = defineEmits<DialogRootEmits>()

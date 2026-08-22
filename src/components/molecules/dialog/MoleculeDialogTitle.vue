@@ -6,7 +6,7 @@ import { DialogTitle, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'
 
 /**
- * Publishes its id to the provider so `<DialogContent>` can point
+ * Publishes its id to the provider so `<MoleculeDialogContent>` can point
  * `aria-labelledby` at it. Every dialog needs one, or the screen reader
  * announces an unnamed dialog.
  */

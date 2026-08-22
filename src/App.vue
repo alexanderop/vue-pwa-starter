@@ -3,10 +3,10 @@ import { Plus } from '@lucide/vue'
 import { computed, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView } from 'vue-router'
-import AppShell from '@/components/AppShell.vue'
-import PwaInstallPrompt from '@/components/PwaInstallPrompt.vue'
-import PwaUpdatePrompt from '@/components/PwaUpdatePrompt.vue'
-import ToastViewport from '@/components/ToastViewport.vue'
+import OrganismAppShell from '@/components/organisms/OrganismAppShell.vue'
+import OrganismPwaInstallPrompt from '@/components/organisms/OrganismPwaInstallPrompt.vue'
+import MoleculePwaUpdatePrompt from '@/components/molecules/MoleculePwaUpdatePrompt.vue'
+import MoleculeToastViewport from '@/components/molecules/MoleculeToastViewport.vue'
 import { useKeyboardInset } from '@/composables/useKeyboardInset'
 import { useLocale } from '@/composables/useLocale'
 import { useTheme } from '@/composables/useTheme'
@@ -38,13 +38,14 @@ const navItems = computed<Array<NavItem>>(() =>
 
 <template>
   <div data-testid="app" class="h-full">
-    <AppShell :items="navItems">
+    <OrganismAppShell :items="navItems">
       <RouterView />
 
       <template #center-action>
         <!-- The outer button, not the inner span, is the hit target — so the
              double-tap-zoom suppression belongs here even though the visible
              press transform is on the span. -->
+        <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomButton cannot express a nav-bar slot: `buttonVariants` is `inline-flex` with `gap-2 rounded-md`, and its `[&_svg:not([class*='size-'])]:size-4` would shrink the 26px Plus icon, since lucide sets size as an attribute rather than a class. Wants a `nav` variant on the atom, not an override here. -->
         <button
           type="button"
           class="flex flex-1 flex-col items-center justify-center px-2 py-2 select-none touch-manipulation"
@@ -58,11 +59,11 @@ const navItems = computed<Array<NavItem>>(() =>
           </span>
         </button>
       </template>
-    </AppShell>
+    </OrganismAppShell>
 
     <QuickAddNoteSheet v-if="quickAdd.hasOpened" v-model:open="quickAdd.isOpen" />
-    <PwaUpdatePrompt />
-    <PwaInstallPrompt />
-    <ToastViewport />
+    <MoleculePwaUpdatePrompt />
+    <OrganismPwaInstallPrompt />
+    <MoleculeToastViewport />
   </div>
 </template>

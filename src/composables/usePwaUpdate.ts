@@ -5,7 +5,7 @@ import { startPeriodicUpdateCheck } from '@/lib/swUpdateCheck'
 /**
  * Service-worker update flow for `registerType: 'prompt'` (vite.config.ts).
  * When a new version is deployed, `needRefresh` flips to true and
- * PwaUpdatePrompt.vue offers a reload instead of silently swapping the app
+ * MoleculePwaUpdatePrompt.vue offers a reload instead of silently swapping the app
  * out from under the user mid-interaction.
  *
  * Registration alone only checks for a new worker once. An installed PWA

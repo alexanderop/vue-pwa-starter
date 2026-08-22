@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
+import AtomButton from '@/components/atoms/AtomButton.vue'
 import { usePwaUpdate } from '@/composables/usePwaUpdate'
 
 /**
@@ -22,10 +22,10 @@ const { needRefresh, reload, dismiss } = usePwaUpdate()
       class="fixed inset-x-4 bottom-24 z-50 flex items-center gap-2 rounded-lg border bg-card p-3 shadow-lg sm:right-6 sm:left-auto sm:max-w-sm"
     >
       <p class="flex-1 text-sm">{{ t('pwa.updateAvailable') }}</p>
-      <Button size="sm" @click="reload">{{ t('pwa.reload') }}</Button>
-      <Button variant="ghost" size="icon" :aria-label="t('pwa.dismiss')" @click="dismiss">
+      <AtomButton size="sm" @click="reload">{{ t('pwa.reload') }}</AtomButton>
+      <AtomButton variant="ghost" size="icon" :aria-label="t('pwa.dismiss')" @click="dismiss">
         <X />
-      </Button>
+      </AtomButton>
     </div>
   </div>
 </template>

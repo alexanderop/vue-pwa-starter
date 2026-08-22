@@ -2,7 +2,7 @@
 import { ChevronLeft } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Button } from '@/components/ui/button'
+import AtomButton from '@/components/atoms/AtomButton.vue'
 
 const { t } = useI18n()
 
@@ -49,7 +49,7 @@ function handleBack(): void {
     class="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
   >
     <div class="flex items-center gap-3 px-4 py-3">
-      <Button
+      <AtomButton
         v-if="showBack"
         variant="ghost"
         size="icon"
@@ -58,7 +58,7 @@ function handleBack(): void {
         @click="handleBack"
       >
         <ChevronLeft class="size-5" />
-      </Button>
+      </AtomButton>
       <div class="min-w-0 flex-1">
         <h1 class="truncate text-xl font-semibold tracking-tight">
           {{ title }}

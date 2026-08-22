@@ -27,7 +27,7 @@
  * one belongs to `tsconfig.vitest`, so an import would not survive
  * `vue-tsc --build`. Deliberately text-level rather than a full parse, like
  * `functionalCore.test.ts`, `touchConventions.test.ts` and
- * `uiPrimitives.test.ts` — and every helper is exercised against synthetic
+ * `primitives.test.ts` — and every helper is exercised against synthetic
  * input as well as the real tree.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'

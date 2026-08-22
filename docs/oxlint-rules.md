@@ -79,9 +79,16 @@ Two hard limits worth knowing before you invest an afternoon:
   `value as User` but not what `value` was. Rules that need types belong in
   ESLint with `@typescript-eslint`'s typed linting, which costs a full program
   build per run.
-- **`.vue` files are linted as their `<script>` block.** Template expressions
-  are not visited. Anything about the template belongs in the arch tier or a
-  browser spec.
+- **`.vue` files are linted as their `<script>` block.** Not just "template
+  expressions are not visited" — the template is not handed to the plugin at
+  all. A `'*'` visitor over `<button>{{ label }}</button>` reports `Program`,
+  `VariableDeclaration`, `VariableDeclarator`, `Identifier`, `Literal`: the
+  script and nothing else. `context.sourceCode.getText()` returns the script
+  text too, so there is not even a string to scan. oxlint also ships no Vue
+  rules of its own. Anything about markup belongs in ESLint, which parses the
+  template through `vue-eslint-parser` — `app/no-raw-elements` in
+  `eslint.config.ts` is the worked example, banning a raw `<button>` outside
+  the primitives — or in the arch tier, or a browser spec.
 
 ## Anatomy of a rule
 

@@ -3,17 +3,17 @@ import { useAtomSet } from '@effect/atom-vue'
 import { Effect } from 'effect'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
+import AtomButton from '@/components/atoms/AtomButton.vue'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+  MoleculeDialog,
+  MoleculeDialogContent,
+  MoleculeDialogDescription,
+  MoleculeDialogHeader,
+  MoleculeDialogTitle,
+} from '@/components/molecules/dialog'
+import AtomInput from '@/components/atoms/AtomInput.vue'
+import AtomLabel from '@/components/atoms/AtomLabel.vue'
+import AtomTextarea from '@/components/atoms/AtomTextarea.vue'
 import { useReportFailure } from '@/composables/useReportFailure'
 import type { NoteDraft } from '@/db'
 import { createNote, dbMutation, isNoteDraft } from '@/db'
@@ -99,23 +99,31 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <Dialog v-model:open="open">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{{ t('notes.form.heading') }}</DialogTitle>
-        <DialogDescription>{{ t('notes.form.description') }}</DialogDescription>
-      </DialogHeader>
+  <MoleculeDialog v-model:open="open">
+    <MoleculeDialogContent>
+      <MoleculeDialogHeader>
+        <MoleculeDialogTitle>{{ t('notes.form.heading') }}</MoleculeDialogTitle>
+        <MoleculeDialogDescription>{{ t('notes.form.description') }}</MoleculeDialogDescription>
+      </MoleculeDialogHeader>
       <form class="flex flex-col gap-4" @submit.prevent="save">
         <div class="flex flex-col gap-2">
-          <Label for="note-title">{{ t('notes.form.titleLabel') }}</Label>
-          <Input id="note-title" v-model="title" :placeholder="t('notes.form.titlePlaceholder')" />
+          <AtomLabel for="note-title">{{ t('notes.form.titleLabel') }}</AtomLabel>
+          <AtomInput
+            id="note-title"
+            v-model="title"
+            :placeholder="t('notes.form.titlePlaceholder')"
+          />
         </div>
         <div class="flex flex-col gap-2">
-          <Label for="note-body">{{ t('notes.form.bodyLabel') }}</Label>
-          <Textarea id="note-body" v-model="body" :placeholder="t('notes.form.bodyPlaceholder')" />
+          <AtomLabel for="note-body">{{ t('notes.form.bodyLabel') }}</AtomLabel>
+          <AtomTextarea
+            id="note-body"
+            v-model="body"
+            :placeholder="t('notes.form.bodyPlaceholder')"
+          />
         </div>
-        <Button type="submit" :disabled="!canSave">{{ t('common.buttons.save') }}</Button>
+        <AtomButton type="submit" :disabled="!canSave">{{ t('common.buttons.save') }}</AtomButton>
       </form>
-    </DialogContent>
-  </Dialog>
+    </MoleculeDialogContent>
+  </MoleculeDialog>
 </template>

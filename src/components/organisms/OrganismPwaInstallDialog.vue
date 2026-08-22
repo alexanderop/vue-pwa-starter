@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Share, SquarePlus } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
+import AtomButton from '@/components/atoms/AtomButton.vue'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  MoleculeDialog,
+  MoleculeDialogClose,
+  MoleculeDialogContent,
+  MoleculeDialogDescription,
+  MoleculeDialogFooter,
+  MoleculeDialogHeader,
+  MoleculeDialogTitle,
+} from '@/components/molecules/dialog'
 import { useInstallPrompt } from '@/composables/useInstallPrompt'
 
 /**
@@ -39,16 +39,18 @@ async function handleInstall(): Promise<void> {
 </script>
 
 <template>
-  <Dialog v-model:open="open">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{{ t('pwa.install.dialog.title') }}</DialogTitle>
-        <DialogDescription>{{ t('pwa.install.dialog.description') }}</DialogDescription>
-      </DialogHeader>
+  <MoleculeDialog v-model:open="open">
+    <MoleculeDialogContent>
+      <MoleculeDialogHeader>
+        <MoleculeDialogTitle>{{ t('pwa.install.dialog.title') }}</MoleculeDialogTitle>
+        <MoleculeDialogDescription>{{
+          t('pwa.install.dialog.description')
+        }}</MoleculeDialogDescription>
+      </MoleculeDialogHeader>
 
       <div v-if="canPromptDirectly" class="flex flex-col gap-3">
         <p class="text-sm text-muted-foreground">{{ t('pwa.install.dialog.prompt') }}</p>
-        <Button @click="handleInstall">{{ t('pwa.install.dialog.action') }}</Button>
+        <AtomButton @click="handleInstall">{{ t('pwa.install.dialog.action') }}</AtomButton>
       </div>
 
       <div v-else-if="platform === 'ios'" class="flex flex-col gap-3">
@@ -86,13 +88,13 @@ async function handleInstall(): Promise<void> {
         </ol>
       </div>
 
-      <DialogFooter>
-        <DialogClose as-child>
-          <Button variant="outline" class="w-full sm:w-auto">
+      <MoleculeDialogFooter>
+        <MoleculeDialogClose as-child>
+          <AtomButton variant="outline" class="w-full sm:w-auto">
             {{ t('common.buttons.close') }}
-          </Button>
-        </DialogClose>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+          </AtomButton>
+        </MoleculeDialogClose>
+      </MoleculeDialogFooter>
+    </MoleculeDialogContent>
+  </MoleculeDialog>
 </template>

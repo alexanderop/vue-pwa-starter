@@ -4,7 +4,7 @@ import { computed, reactive } from 'vue'
 /**
  * Global state for the quick-add bottom sheet opened from the nav's center
  * "+" button. Lives here (not in view-local state) because the trigger sits
- * in the AppShell's center-action slot while the sheet itself is mounted
+ * in OrganismAppShell's center-action slot while the sheet itself is mounted
  * once in App.vue, outside any route view.
  *
  * The state is held in atoms, so it lives in the atom registry: App.vue is
