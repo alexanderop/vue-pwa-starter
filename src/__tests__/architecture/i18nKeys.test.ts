@@ -81,11 +81,22 @@ const FILES = sourceFiles(SOURCE_ROOT).map((path) => ({
   source: readFileSync(`${SOURCE_ROOT}${path}`, 'utf8'),
 }))
 
+/**
+ * The catalogue as this file walks it: a string is a leaf, anything else is a
+ * subtree. `en` is far more precisely typed than this — the point here is to
+ * recurse over *any* catalogue shape without the traversal knowing the keys.
+ */
+type MessageTree = { readonly [key: string]: string | MessageTree }
+
+function isSubtree(value: string | MessageTree): value is MessageTree {
+  return typeof value !== 'string'
+}
+
 /** Every leaf of the catalogue, as the dotted path `t()` is given. */
-function messageKeys(messages: object, prefix = ''): Array<string> {
+function messageKeys(messages: MessageTree, prefix = ''): Array<string> {
   return Object.entries(messages).flatMap(([key, value]) => {
     const path = prefix ? `${prefix}.${key}` : key
-    return typeof value === 'object' && value !== null ? messageKeys(value, path) : [path]
+    return isSubtree(value) ? messageKeys(value, path) : [path]
   })
 }
 

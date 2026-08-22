@@ -117,10 +117,10 @@ export function usesTestDoubles(source: string): boolean {
  * Core modules with no unit spec, each with the reason — the `HOVER_ONLY_ALLOWED`
  * idiom. An exemption with no justification is a hole with a comment shape.
  */
-const UNTESTED_CORE: Readonly<Record<string, string>> = {
+const UNTESTED_CORE = {
   'src/lib/utils.ts':
     'cn() is a two-line composition of clsx and tailwind-merge; a spec here would assert what those two packages do, not what we do.',
-}
+} satisfies Readonly<Record<string, string>>
 
 // --- the rules ------------------------------------------------------------
 

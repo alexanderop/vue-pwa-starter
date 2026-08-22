@@ -60,6 +60,10 @@ describe('sortNotes', () => {
       expect(canonical(sorted)).toEqual(canonical(notes))
 
       sorted.slice(1).forEach((next, i) => {
+        // SAFETY: `i` indexes `sorted.slice(1)`, so it is one short of
+        // `sorted`'s last index — `sorted[i]` is always in bounds. The
+        // assertion only removes the `| undefined` noUncheckedIndexedAccess
+        // adds.
         const prev = sorted[i] as Note
 
         // An unpinned note never precedes a pinned one…

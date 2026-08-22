@@ -28,17 +28,19 @@ const isLoaded = computed(() => AsyncResult.isNotInitial(notesResult.value))
 // leaves `never` in the error channel — the only thing dbMutation accepts.
 // An unhandled DatabaseError here is a type error, not a silent no-op.
 //
-// Every handler returns the mutation promise to Vue: with the failures
+// Every handler hands its mutation promise back to Vue: with the failures
 // already caught by tag, a rejection can only be a defect, and Vue routes it
-// to `app.config.errorHandler` — but only for promises it is handed.
+// to `app.config.errorHandler` — but only for promises it is handed. The
+// handlers await rather than return, so the contract is `Promise<void>`: the
+// atom's success value is nothing a caller reads.
 const runMutation = useAtomSet(() => dbMutation, { mode: 'promise' })
 
 // The shared failure branch: a structured log for the developer, a toast for
 // the user — see useReportFailure for why it is an Effect.
 const reportFailure = useReportFailure('notes')
 
-function handleTogglePinned(id: string): Promise<unknown> {
-  return runMutation(
+async function handleTogglePinned(id: string): Promise<void> {
+  await runMutation(
     toggleNotePinned(id).pipe(
       Effect.catchTag(
         'Db.DatabaseError',
@@ -48,8 +50,8 @@ function handleTogglePinned(id: string): Promise<unknown> {
   )
 }
 
-function handleDelete(id: string): Promise<unknown> {
-  return runMutation(
+async function handleDelete(id: string): Promise<void> {
+  await runMutation(
     deleteNote(id).pipe(
       // Only a delete that landed is confirmed — the tap runs on the success
       // branch alone, so the catch below cannot double up on it.

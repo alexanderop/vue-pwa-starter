@@ -106,6 +106,10 @@ describe('a11y coverage', () => {
     // The maps can only name a sweep that exists — `SweepId` sees to that.
     // What the type system cannot see is a sweep id nobody ever ran, which is
     // how a "covered" component ends up covered by nothing.
+    // SAFETY: `SweepId` is `keyof typeof SWEEPS`, so the keys of that exact
+    // object literal are its members. `Object.keys` widens to `string[]`
+    // because a runtime object may carry more; this one is a const literal
+    // in the same module and cannot.
     const unused = (Object.keys(SWEEPS) as Array<SweepId>).filter(
       (sweep) => !a11ySpecSource.includes(`SWEEPS.${sweep}`),
     )

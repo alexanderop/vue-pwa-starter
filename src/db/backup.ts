@@ -26,6 +26,10 @@ const decodePayload = Schema.decodeUnknownEffect(BackupSchema)
  * No IndexedDB involved, which is what makes the import rules testable in
  * the Node unit tier.
  */
+// This *is* the boundary `no-unknown-parameters` redirects to: `payload` is a
+// user-picked file's JSON and the next line runs BackupSchema over it. A named
+// type here would be the unchecked claim the rule exists to prevent.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the decode boundary itself
 export const decodeBackup = (payload: unknown): Effect.Effect<BackupPayload, BackupInvalidError> =>
   decodePayload(payload).pipe(
     Effect.mapError((error) => new BackupInvalidError({ message: error.message })),
@@ -63,6 +67,7 @@ export const exportData: Effect.Effect<BackupPayload, DatabaseError, NotesRepo> 
  * the type. Returns the number of imported notes.
  */
 // Stryker disable next-line StringLiteral: the span name is observability, not behavior — no unit test should assert it
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the decode boundary itself: decodeBackup is the body's first line
 export const importData = Effect.fn('Backup.importData')(function* (payload: unknown) {
   const backup = yield* decodeBackup(payload)
   const repo = yield* NotesRepo

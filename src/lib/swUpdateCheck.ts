@@ -1,3 +1,6 @@
+/** The part of a `ServiceWorkerRegistration` a periodic update check touches. */
+export type UpdatableRegistration = Pick<ServiceWorkerRegistration, 'installing' | 'update'>
+
 /** Hourly: often enough that a resumed app picks up a deploy, cheap enough to ignore. */
 const SW_UPDATE_INTERVAL_MS = 60 * 60 * 1000
 
@@ -12,10 +15,14 @@ const SW_UPDATE_INTERVAL_MS = 60 * 60 * 1000
  * device or a 404 during a deploy doesn't churn the registration.
  *
  * Returns a stop function; the interval is otherwise page-lifetime.
+ *
+ * The registration is narrowed to the two members this module reads, so the
+ * contract says what it needs and a spec can hand it a stand-in without
+ * asserting one into existence.
  */
 export function startPeriodicUpdateCheck(
   swUrl: string,
-  registration: ServiceWorkerRegistration,
+  registration: UpdatableRegistration,
   intervalMs: number = SW_UPDATE_INTERVAL_MS,
 ): () => void {
   const timer = setInterval(() => {
@@ -27,10 +34,7 @@ export function startPeriodicUpdateCheck(
   }
 }
 
-async function checkForUpdate(
-  swUrl: string,
-  registration: ServiceWorkerRegistration,
-): Promise<void> {
+async function checkForUpdate(swUrl: string, registration: UpdatableRegistration): Promise<void> {
   // An install is already in flight — let it finish.
   if (registration.installing) return
 

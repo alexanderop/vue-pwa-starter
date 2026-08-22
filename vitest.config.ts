@@ -191,6 +191,19 @@ export default defineConfig({
         },
       },
 
+      // Lint rules: the vendored oxlint plugin in tools/oxlint/. Runs in Node
+      // and colocates its specs with the rules, unlike every tier above —
+      // that is the price of keeping the tree a drop-in copy of upstream
+      // anti-slop, so a rule and its RuleTester cases stay diffable against
+      // it. See docs/oxlint-rules.md.
+      {
+        test: {
+          name: 'lint-rules',
+          globals: true,
+          include: ['tools/oxlint/**/*.test.ts'],
+        },
+      },
+
       // Architecture: ArchUnitTS rules, runs in Node for filesystem analysis.
       {
         resolve,

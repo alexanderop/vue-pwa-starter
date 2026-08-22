@@ -1,3 +1,4 @@
+import type { VNode } from 'vue'
 import type { Router } from 'vue-router'
 import { NotebookPen, Settings } from '@lucide/vue'
 import { page } from 'vitest/browser'
@@ -11,6 +12,9 @@ import type { NavItem } from '@/types/navigation'
 import { it as base } from '../fixtures'
 
 const Stub = defineComponent({ render: () => h('div', 'stub view') })
+
+/** Mirrors AppShell's own `defineSlots`, so a renamed slot fails here too. */
+type ShellSlots = { default: () => VNode; 'center-action'?: () => VNode }
 
 function makeRouter(): Router {
   return createRouter({
@@ -46,14 +50,17 @@ const it = base.extend('renderShell', async ({}, { onCleanup }) => {
     await router.push(initialPath)
     await router.isReady()
 
+    // The center-action slot is filled or absent, never present-and-empty:
+    // AppShell branches on `$slots['center-action']`, so an empty function
+    // would test the wrong side of that branch.
+    const slots: ShellSlots = { default: () => h('div', 'page content') }
+    if (withCenterAction) {
+      slots['center-action'] = () => h('button', { type: 'button' }, 'center')
+    }
+
     mounted = render(AppShell, {
       props: { items },
-      slots: {
-        default: () => h('div', 'page content'),
-        ...(withCenterAction
-          ? { 'center-action': () => h('button', { type: 'button' }, 'center') }
-          : {}),
-      },
+      slots,
       global: { plugins: [i18n, router] },
     })
 

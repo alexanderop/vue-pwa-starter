@@ -77,6 +77,10 @@ export const downloadBackup = (payload: {
  */
 export const readBackupFile = (file: File): Effect.Effect<unknown, BackupFileError> =>
   Effect.tryPromise({
+    // The annotation is the point: `JSON.parse` returns `any`, and narrowing
+    // it to `unknown` is what forces `importData` to decode it. Removing it
+    // weakens the contract rather than tightening it.
+    // oxlint-disable-next-line anti-slop/no-unknown-returns -- narrowing JSON.parse's `any`
     try: async (): Promise<unknown> => JSON.parse(await file.text()),
     catch: (cause) => new BackupFileError({ operation: 'read backup file', cause }),
   })

@@ -47,7 +47,14 @@ function localeName(code: SupportedLocale): string {
 }
 
 function handleLocaleChange(event: Event): void {
+  // SAFETY: the handler is bound to `<select>`'s own change event in this
+  // component's template, so the target is that element. `setLocale` then
+  // re-checks the value against SUPPORTED_LOCALES and falls back — the
+  // assertion is a shape claim, not a validity one.
   const value = (event.target as HTMLSelectElement).value
+  // SAFETY: `setLocale` re-checks the value against SUPPORTED_LOCALES and
+  // falls back to the default, so this narrows the argument type without
+  // claiming the string has been validated.
   setLocale(value as SupportedLocale)
 }
 
@@ -75,6 +82,8 @@ function handleExport(): Promise<void> {
 const fileInput = ref<HTMLInputElement | null>(null)
 
 async function handleImportFile(event: Event): Promise<void> {
+  // SAFETY: bound to `<input type="file">`'s own change event in this
+  // component's template, so the target is that input.
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''

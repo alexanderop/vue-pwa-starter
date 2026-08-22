@@ -8,6 +8,9 @@ export const LOCALE_STORAGE_KEY = 'vue-pwa-starter.locale'
 const DEFAULT_LOCALE: SupportedLocale = 'en'
 
 function isSupportedLocale(value: string): value is SupportedLocale {
+  // SAFETY: widening a `ReadonlyArray<SupportedLocale>` to
+  // `ReadonlyArray<string>` so `includes` accepts an arbitrary string. Every
+  // element still has its original type; only the parameter is loosened.
   return (SUPPORTED_LOCALES as ReadonlyArray<string>).includes(value)
 }
 

@@ -310,12 +310,17 @@ const COMPOSABLE_CONVENTIONS: Linter.RulesRecord = {
 type Boundary = { group: string[]; message: string }
 type RestrictImports = ['error', { patterns: Boundary[] }]
 
-const boundary = (name: string, files: string[], ignores: string[], patterns: Boundary[]) => ({
-  name: `app/boundaries/${name}`,
-  files,
-  ...(ignores.length > 0 ? { ignores } : {}),
-  rules: { 'no-restricted-imports': ['error', { patterns }] as RestrictImports },
-})
+const boundary = (name: string, files: string[], ignores: string[], patterns: Boundary[]) => {
+  // SAFETY: both elements are checked by this function's own signature — the
+  // literal 'error' and `patterns: Boundary[]`. The assertion only pins the
+  // tuple that TypeScript would otherwise widen to an array; it claims
+  // nothing the compiler has not already seen.
+  const rules = { 'no-restricted-imports': ['error', { patterns }] as RestrictImports }
+  const config = { name: `app/boundaries/${name}`, files, rules }
+  // `ignores: []` is not the same as no `ignores` to every flat-config
+  // consumer, so the key is added rather than spread in as an empty object.
+  return ignores.length > 0 ? { ...config, ignores } : config
+}
 
 /** Applies everywhere outside src/components/ui — see NO_HEADLESS_DIRECT. */
 const CONSUMES_UI = [NO_HEADLESS_DIRECT, NO_UI_INTERNALS, NO_SHADCN]

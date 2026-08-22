@@ -1,4 +1,4 @@
-import { Effect, Logger, References } from 'effect'
+import { Effect, Logger, type Record, References } from 'effect'
 import { expect } from 'vitest'
 import { useReportFailure } from '@/composables/useReportFailure'
 import { useToastStore } from '@/stores/toast'
@@ -6,7 +6,13 @@ import { it as base } from '../fixtures'
 
 interface LogEntry {
   readonly level: string
-  readonly annotations: Record<string, unknown>
+  /**
+   * Effect's own type for the annotation map, not a restatement of it: any
+   * program on the fiber may annotate with anything, so this really is an
+   * open dictionary and `Record<string, unknown>` written out here would be
+   * both a lint error and a second copy of a contract we do not own.
+   */
+  readonly annotations: Record.ReadonlyRecord<string, unknown>
 }
 
 /**

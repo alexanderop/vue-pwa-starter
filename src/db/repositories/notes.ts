@@ -55,6 +55,10 @@ const validatePatch = (patch: NotePatch): Effect.Effect<NotePatch, NoteInvalidEr
  * damaged rather than merely old — and quietly dropping it would show the
  * user a short list they might then export over their last good backup.
  */
+// IndexedDB is untrusted input by this project's rules; `decodeStoredNote`
+// below is the parse `no-unknown-parameters` asks for, and this parameter is
+// its input.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the decode boundary itself
 const decodeRow = (stored: unknown): Effect.Effect<Note, DatabaseError> =>
   decodeStoredNote(stored).pipe(
     Effect.mapError((cause) => new DatabaseError({ operation: 'decode note row', cause })),

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "check": "run-p --continue-on-error --aggregate-output --print-label lint:check format:check type-check test:unit test:arch knip",
+    "check": "run-p --continue-on-error --aggregate-output --print-label lint:check format:check type-check test:unit test:arch test:lint-rules knip",
     "build": "run-p type-check \"build-only {@}\" --",
     "build-only": "vite build",
     "preview": "vite preview",
@@ -22,6 +22,8 @@
     "test:visual": "vitest run --project=visual",
     "test:visual:update": "vitest run --project=visual --update",
     "test:arch": "vitest run --project=arch",
+    "test:lint-rules": "vitest run --project=lint-rules",
+    "ast": "node --experimental-strip-types tools/oxlint/ast.ts",
     "test:coverage": "vitest run --project=default --coverage",
     "test:mutation": "stryker run",
     "test:e2e": "run-s build-only test:e2e:prebuilt",
@@ -62,6 +64,7 @@
   "devDependencies": {
     "@e18e/eslint-plugin": "catalog:lint",
     "@effect/vitest": "catalog:testing",
+    "@oxlint/plugins": "catalog:lint",
     "@playwright/test": "catalog:testing",
     "@size-limit/file": "catalog:lint",
     "@stryker-mutator/api": "catalog:testing",

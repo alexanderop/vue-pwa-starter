@@ -40,7 +40,7 @@ export type SweepId = keyof typeof SWEEPS
  * the `toast` sweep has a toast *in* it, and an empty live region is not what
  * anyone wants checked.
  */
-export const A11Y_COVERAGE: Readonly<Record<string, SweepId>> = {
+export const A11Y_COVERAGE = {
   'App.vue': 'notesHome',
   'components/AppShell.vue': 'notesHome',
   'components/PageHeader.vue': 'settings',
@@ -53,7 +53,7 @@ export const A11Y_COVERAGE: Readonly<Record<string, SweepId>> = {
   'features/notes/components/QuickAddNoteSheet.vue': 'quickAdd',
   'views/NotesView.vue': 'notesHome',
   'views/SettingsView.vue': 'settings',
-}
+} satisfies Readonly<Record<string, SweepId>>
 
 /**
  * Components deliberately left out of the a11y tier, each with the reason.

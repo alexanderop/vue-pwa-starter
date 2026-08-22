@@ -21,6 +21,9 @@ export async function renderApp(initialPath = '/') {
     global: {
       plugins: [i18n, router],
       provide: {
+        // SAFETY: `registryKey` is an InjectionKey<AtomRegistry>, which is a
+        // branded symbol — `provide`'s index signature takes the symbol, and
+        // the assertion only strips the phantom type parameter off it.
         [registryKey as symbol]: AtomRegistry.make(),
       },
     },

@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { UpdatableRegistration } from '@/lib/swUpdateCheck'
 import { startPeriodicUpdateCheck } from '@/lib/swUpdateCheck'
 
 const SW_URL = '/sw.js'
 
-function fakeRegistration(installing: ServiceWorker | null = null) {
-  return {
-    installing,
-    update: vi.fn().mockResolvedValue(undefined),
-  } as unknown as ServiceWorkerRegistration & { update: ReturnType<typeof vi.fn> }
+function fakeRegistration(
+  installing: ServiceWorker | null = null,
+): UpdatableRegistration & { update: ReturnType<typeof vi.fn> } {
+  return { installing, update: vi.fn().mockResolvedValue(undefined) }
 }
 
 /** Advance past one interval and let the async check settle. */
@@ -61,6 +61,8 @@ describe('startPeriodicUpdateCheck', () => {
   })
 
   it('skips the poll while an install is in flight', async () => {
+    // SAFETY: `installing` is only read for truthiness — checkForUpdate bails
+    // on any non-null value without touching a member of it.
     const registration = fakeRegistration({} as ServiceWorker)
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
