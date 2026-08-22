@@ -126,7 +126,7 @@ Guidance:
 
 ```ts
 export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
-  "UserRepo.PersistenceError",
+  'UserRepo.PersistenceError',
   {
     operation: Schema.String,
     cause: Schema.Defect(),

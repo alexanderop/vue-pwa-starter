@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: HTTP clients
-description: "Outgoing HTTP with Effect HttpClient: adapters, status classification, retries, and rate limiting."
+description: 'Outgoing HTTP with Effect HttpClient: adapters, status classification, retries, and rate limiting.'
 tags: [effect, http]
 status: stable
 sources:
@@ -78,28 +78,28 @@ Use raw `fetch` deliberately when implementing a platform transport, adapting an
 If a temporary raw `fetch` boundary is unavoidable, keep it inside an adapter service and still use Effect boundary discipline.
 
 ```ts
-const request = Effect.fn("Provider.request")(function* (input: RequestInput) {
+const request = Effect.fn('Provider.request')(function* (input: RequestInput) {
   const response = yield* Effect.tryPromise({
     try: (signal) => fetch(input.url, { signal, headers: input.headers }),
-    catch: (cause) => new ProviderError({ operation: "Provider.request", cause }),
+    catch: (cause) => new ProviderError({ operation: 'Provider.request', cause }),
   })
 
   if (!response.ok) {
-    return yield* Effect.fail(new ProviderRejected({
-      operation: "Provider.request",
-      status: response.status,
-    }))
+    return yield* Effect.fail(
+      new ProviderRejected({
+        operation: 'Provider.request',
+        status: response.status,
+      }),
+    )
   }
 
   const json = yield* Effect.tryPromise({
     try: () => response.json(),
-    catch: (cause) => new ProviderError({ operation: "Provider.decodeJson", cause }),
+    catch: (cause) => new ProviderError({ operation: 'Provider.decodeJson', cause }),
   })
 
   return yield* Schema.decodeUnknownEffect(ResponseSchema)(json).pipe(
-    Effect.mapError((cause) =>
-      new ProviderError({ operation: "Provider.decodeResponse", cause }),
-    ),
+    Effect.mapError((cause) => new ProviderError({ operation: 'Provider.decodeResponse', cause })),
   )
 })
 ```

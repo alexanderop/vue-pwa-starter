@@ -26,10 +26,10 @@ Use this when writing Effect tests, tests involving time, retry, schedules, conc
 - Assert typed failures, rollback, interruption, finalization, retry bounds, idempotency, concurrency laws, and malformed persistence where relevant.
 
 ```ts
-it.effect("finds a user", () =>
+it.effect('finds a user', () =>
   Effect.gen(function* () {
     const users = yield* UserRepo.Service
-    const result = yield* users.find(UserId.make("u1"))
+    const result = yield* users.find(UserId.make('u1'))
     expect(Option.isSome(result)).toBe(true)
   }).pipe(Effect.provide(UserRepo.testLayer)),
 )
@@ -44,7 +44,7 @@ it.effect("finds a user", () =>
 - Use explicit test hooks when the production boundary can expose a deterministic synchronization point.
 
 ```ts
-it.effect("publishes exactly once", () =>
+it.effect('publishes exactly once', () =>
   Effect.gen(function* () {
     const published = yield* Queue.unbounded<Message>()
     const ready = yield* Deferred.make<void>()
@@ -54,9 +54,7 @@ it.effect("publishes exactly once", () =>
       onPublish: (message) => Queue.offer(published, message),
     })
 
-    yield* runWorker.pipe(
-      Effect.forkScoped,
-    )
+    yield* runWorker.pipe(Effect.forkScoped)
 
     yield* Deferred.await(ready)
     const message = yield* Queue.take(published)
@@ -75,9 +73,7 @@ export interface Interface {
   readonly send: (message: Message) => Effect.Effect<void, SendError>
 }
 
-export class Service extends Context.Service<Service, Interface>()(
-  "@app/Notifier",
-) {}
+export class Service extends Context.Service<Service, Interface>()('@app/Notifier') {}
 
 export interface TestInterface extends Interface {
   readonly sentMessages: () => Effect.Effect<ReadonlyArray<Message>>
@@ -85,7 +81,7 @@ export interface TestInterface extends Interface {
 }
 
 export class TestService extends Context.Service<TestService, TestInterface>()(
-  "@app/Notifier/Test",
+  '@app/Notifier/Test',
 ) {}
 
 export const testLayer = Layer.effectContext(
@@ -94,23 +90,20 @@ export const testLayer = Layer.effectContext(
     const nextFailure = yield* Ref.make<Option.Option<SendError>>(Option.none())
 
     const service = TestService.of({
-      send: Effect.fn("Notifier.Test.send")(function* (message) {
+      send: Effect.fn('Notifier.Test.send')(function* (message) {
         const failure = yield* Ref.getAndSet(nextFailure, Option.none())
         if (Option.isSome(failure)) return yield* Effect.fail(failure.value)
         yield* Ref.update(sent, (messages) => [...messages, message])
       }),
-      sentMessages: Effect.fn("Notifier.Test.sentMessages")(function* () {
+      sentMessages: Effect.fn('Notifier.Test.sentMessages')(function* () {
         return yield* Ref.get(sent)
       }),
-      failNextSend: Effect.fn("Notifier.Test.failNextSend")(function* (error) {
+      failNextSend: Effect.fn('Notifier.Test.failNextSend')(function* (error) {
         yield* Ref.set(nextFailure, Option.some(error))
       }),
     })
 
-    return Context.empty().pipe(
-      Context.add(Service, service),
-      Context.add(TestService, service),
-    )
+    return Context.empty().pipe(Context.add(Service, service), Context.add(TestService, service))
   }),
 )
 ```

@@ -32,7 +32,7 @@ Prefer `effect/Cache` over a `Map` + timestamp + prune-loop cache when its keyed
 ## Exit-aware TTL (cache successes, skip degraded results)
 
 ```ts
-import { Cache, Duration, Effect, Exit } from "effect"
+import { Cache, Duration, Effect, Exit } from 'effect'
 
 const makeResolver = Effect.gen(function* () {
   const cache = yield* Cache.makeWith(
@@ -40,7 +40,7 @@ const makeResolver = Effect.gen(function* () {
     {
       capacity: 300,
       timeToLive: (exit) =>
-        Exit.isSuccess(exit) && exit.value.cacheable ? "10 minutes" : Duration.zero,
+        Exit.isSuccess(exit) && exit.value.cacheable ? '10 minutes' : Duration.zero,
     },
   )
   return (channelRef: string) =>
@@ -56,8 +56,7 @@ A cache cannot fix a lookup that pays a scoped acquisition per call, such as SDK
 
 ```ts
 // Bad: every cache miss acquires a fresh client
-const lookup = (id: string) =>
-  getRecord(id).pipe(Effect.provide(apiClientLayer(options)))
+const lookup = (id: string) => getRecord(id).pipe(Effect.provide(apiClientLayer(options)))
 
 // Good: client built once for the layer's lifetime; misses are one API call
 // Layer.build requires Scope.Scope; acquire this inside the owning layer's scope.
