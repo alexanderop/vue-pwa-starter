@@ -33,15 +33,24 @@ export class NotesScreen extends AppScreen {
    * not chrome, and so the one thing that stays selectable.
    */
   noteBody(body: string): Locator {
-    return page.getByText(body, { exact: true })
+    return page.getByText(body)
   }
 
   get emptyState(): Locator {
     return page.getByText('No notes yet')
   }
 
+  /**
+   * The center FAB. Exposed rather than inlined into `openQuickAdd` because
+   * it is also the *target* of a contract: a modal has to hand focus back to
+   * whatever opened it, so a spec needs to name the trigger to assert that.
+   */
+  get addButton(): Locator {
+    return page.getByRole('button', { name: 'Add a note' })
+  }
+
   async openQuickAdd(): Promise<void> {
-    await page.getByRole('button', { name: 'Add a note' }).click()
+    await this.addButton.click()
     // The sheet is lazy-loaded (App.vue), so it is not on screen the moment
     // the button is clicked — every caller would otherwise wait for it.
     await this.quickAdd.expectReady()

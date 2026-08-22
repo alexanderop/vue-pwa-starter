@@ -18,17 +18,54 @@ const optimizeDependencies = {
   include: ['web-vitals', 'workbox-window'],
 }
 
+/**
+ * What a *failing* browser action or assertion costs.
+ *
+ * Without it, Playwright waits forever and the failure is capped by
+ * `testTimeout` instead: every red assertion costs 8s locally and 15s in CI,
+ * whatever it was actually waiting for. Setting it makes the provider return
+ * early, so a failing action stops at this number and a failing
+ * `expect.element` falls back to `expect.poll`'s own 1s default. Measured
+ * here: a failing assertion 8123ms → 1162ms, a failing action 7985ms →
+ * 2099ms, with the green suite unchanged. It buys nothing on a green run; it
+ * is the inner debugging loop that gets ~7× cheaper.
+ *
+ * 2000 is not a universal constant — it is this suite's slowest legitimate
+ * wait plus margin, and the ladder that found it is the thing to re-run when
+ * a tier starts flaking: temporarily set this to 300, 500, 1000 and note
+ * where it goes red. Today that is 300ms → 3 failures (a router push and two
+ * install-prompt handoffs), 500ms → green. So the slowest real wait is
+ * somewhere in 300–500ms, and 2000 keeps 4–6× headroom for CI hardware that
+ * is slower than this laptop.
+ */
+const ACTION_TIMEOUT = 2000
+
 function browserConfig(name: string) {
-  return {
+  const config = {
     enabled: true,
-    provider: playwright(),
+    provider: playwright({ actionTimeout: ACTION_TIMEOUT }),
     instances: [{ browser: 'chromium' as const, name }],
     headless: true,
-    trace: {
-      mode: 'retain-on-failure' as const,
-      tracesDir: '.vitest/traces',
-    },
+    // Substring matching is the default in Vitest 4 and the source of a whole
+    // family of tests that pass against a component that never works:
+    // `getByText('checked')` matches `unchecked`, `getByRole('option', { name:
+    // 'Apple' })` matches *Pineapple*. Exact is Vitest 5's default, so turning
+    // it on now is that migration done early, and it means a spec only spells
+    // out `{ exact: true }` where it is saying something.
+    locators: { exact: true },
   }
+
+  // Traces are a debugging tool, not a suite mode. Playwright records a chunk
+  // per test and throws the zip away again when the test passes, so a green
+  // run pays for artifacts nobody reads. Measured on a 97-file browser suite:
+  // 2.85× wall clock, and it brought its own failures with it — 13–15
+  // spurious ones across two runs, plus `tracing.stopChunk: file data stream
+  // has unexpected number of bytes`. Turn it on for the one file you are
+  // debugging: `VITEST_TRACE=1 pnpm test <file>`, then open the zip under
+  // `.vitest/traces` at https://trace.playwright.dev/.
+  if (!process.env.VITEST_TRACE) return config
+
+  return { ...config, trace: { mode: 'retain-on-failure' as const, tracesDir: '.vitest/traces' } }
 }
 
 // Shared plugins for all browser projects
@@ -147,7 +184,11 @@ export default defineConfig({
             // `hasTouch` alone gives the page touch events; `isMobile` is
             // what flips Chromium's primary pointer to coarse. Both, or the
             // tier is a desktop run with a touch API bolted on.
+            // Rebuilt rather than spread, because a provider is a function
+            // call: naming `provider` here replaces the one `browserConfig`
+            // returned, options and all.
             provider: playwright({
+              actionTimeout: ACTION_TIMEOUT,
               contextOptions: { hasTouch: true, isMobile: true },
             }),
           },

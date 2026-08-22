@@ -15,7 +15,7 @@ import { page } from 'vitest/browser'
  */
 export class UpdatePrompt {
   get banner(): Locator {
-    return page.getByText('A new version is available', { exact: true })
+    return page.getByText('A new version is available')
   }
 
   get reloadButton(): Locator {

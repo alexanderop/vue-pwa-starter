@@ -76,7 +76,7 @@ Three properties are worth knowing:
 | A harness for one spec          | That spec file, extending the shared `it`                  |
 
 `components/appShell.spec.ts` (a stub router and a component in isolation) and
-`components/ui/dialog/dialogContent.spec.ts` (a tall sheet under a simulated
+`components/molecules/dialog/dialogContent.spec.ts` (a tall sheet under a simulated
 keyboard) are the worked examples of the second row. Neither harness means
 anything outside its file, so neither belongs in the shared module. Both still
 extend the shared `it`, so there is one import to remember.
@@ -151,6 +151,39 @@ cost nothing to keep in CI. Two rules keep them honest:
   copy change, and a baseline nobody reads is a baseline nobody trusts.
 - **Rebaseline deliberately**: `pnpm test:a11y -- --update`, then read the
   diff. A structure change that surprises you is the test doing its job.
+
+## Focus is the third accessibility layer, and it needs real input
+
+Axe answers "does this markup break a rule". ARIA snapshots answer "does the exposed structure still say what it should". Neither can answer "can a keyboard user operate this" — and a dialog with impeccable ARIA that drops focus on `<body>` and never hands it back passes both while being unusable. That is the regression portalled content produces, because the node the user came from is nowhere near the node they land in.
+
+The assertions live in the tier that renders the real trigger, not in `a11y/`: `features/notes/quickAddFocus.spec.ts` for the sheet, `touch/sheetFocus.spec.ts` for its coarse-pointer half.
+
+- **Tab with `userEvent.tab()`, then assert where focus went.** Not a synthetic `keydown` plus `event.defaultPrevented` — that was jsdom's only option, since it has no sequential focus navigation and a Tab there moves nothing. `defaultPrevented` is the implementation detail that stood in for the contract; the contract is the destination.
+- **A trap is a claim about a subtree, so it is not a locator matcher.** `toHaveFocus` asks about one element; 4.1.10 has no `toContainFocus`. `QuickAddSheet.expectHoldsFocus` does the containment read instead, synchronously — the preceding `tab()` has already resolved, so "focus is here now" is the contract and a retrying matcher would widen it to "focus arrives here eventually", which a leaking dialog satisfies on its way past.
+- **Assert focus restoration explicitly.** A modal has to hand focus back to whatever opened it. That is why `NotesScreen.addButton` is a named locator rather than inlined into `openQuickAdd`: the trigger is the assertion target.
+- **A modal also hides its backdrop from assistive technology, and that is a separate test.** reka-ui marks the app root `aria-hidden` while a modal is open, so `getByRole('navigation')` resolves to nothing — the shell is on screen, pixel-for-pixel, and gone from the accessibility tree. Assert it as a count (`expect(notes.tabBar.query()).toBeNull()`); no attribute probe on the nav itself would see it, because the attribute lands on an ancestor.
+
+## Press a disabled control with `force: true`
+
+**Rule: when the claim is "this control refuses the interaction", assert the state _and_ press it.**
+
+```ts
+await expect.element(notes.quickAdd.saveButton).toBeDisabled()
+await notes.quickAdd.pressSaveIgnoringDisabled() // click({ force: true })
+```
+
+Both, because they are different claims and a mutation check separates them. `toBeDisabled` pins the binding — dropping `:disabled="!canSave"` leaves the press alone green, since `save()` carries the same rule a second time and nothing is written either way. The press pins that the platform honours the state, which the jsdom-era spelling could not: a test framework's `trigger('click')` short-circuits on a disabled control itself, so it graded its own guard rather than the browser's.
+
+`force: true` skips the actionability _wait_, not the gesture — Chromium still delivers a real `pointerdown` and then declines to follow it with a click. Without it, `.click()` sits in "wait for enabled" until `actionTimeout` and fails for a reason unrelated to the contract.
+
+## Locators match exactly, and it is configured once
+
+`browser.locators.exact` is on in `vitest.config.ts`, so no spec spells out `{ exact: true }`. Vitest 4's default is substring matching, which is a family of tests that pass against a component that never works: `getByText('checked')` matches `unchecked`, `getByRole('option', { name: 'Apple' })` matches _Pineapple_. Exact is Vitest 5's default, so this is that migration done early.
+
+Two knobs in the same config are worth knowing because they change what a _failure_ costs, not what passes:
+
+- **`actionTimeout: 2000`** caps a failing action and lets a failing `expect.element` fall back to `expect.poll`'s 1s default instead of inheriting `testTimeout`. Measured here: a failing assertion 8123 ms → 1162 ms. The comment above it holds the ladder that chose the number, and re-running that ladder is the response when a tier starts flaking.
+- **Traces are off by default.** `VITEST_TRACE=1 pnpm test <file>` for the one file you are debugging. Left on for a whole suite they cost ~2.85× wall clock and bring their own failures.
 
 ## `toBeInViewport` when the claim is reachability
 

@@ -28,6 +28,37 @@ describe('notes quick-add flow', () => {
     expect(await storedNotes()).toHaveLength(0)
   })
 
+  /**
+   * A title-less draft, refused — pressed rather than read.
+   *
+   * Two assertions because two different things are being claimed, and a
+   * mutation check is what separated them. The state assertion pins the
+   * binding: dropping `:disabled="!canSave"` leaves this test green without
+   * it, because `save()` carries the same rule a second time and the write
+   * never happens either way. The forced press pins that the platform
+   * *honours* the state — the jsdom-era spelling of this could not, since a
+   * test framework's `trigger('click')` short-circuits on a disabled control
+   * itself and so grades its own guard rather than the browser's.
+   *
+   * `force: true` is what makes the press writable: it skips the
+   * actionability *wait*, not the gesture, so Chromium still delivers a real
+   * `pointerdown` and then declines to follow it with a click. A plain
+   * `.click()` would instead sit in "wait for enabled" until `actionTimeout`
+   * and fail for a reason that has nothing to do with the contract.
+   */
+  it('refuses to save a draft with no title', async ({ notes }) => {
+    await notes.openQuickAdd()
+    await notes.quickAdd.fill({ body: 'a body, but no title' })
+
+    await expect.element(notes.quickAdd.saveButton).toBeDisabled()
+
+    await notes.quickAdd.pressSaveIgnoringDisabled()
+
+    // The sheet is still open and usable, and nothing reached IndexedDB.
+    await notes.quickAdd.expectReady()
+    expect(await storedNotes()).toHaveLength(0)
+  })
+
   it('keeps the draft when the sheet is dismissed by accident', async ({ notes }) => {
     await notes.openQuickAdd()
     await notes.quickAdd.fill({ title: 'Half typed', body: '…and a body' })

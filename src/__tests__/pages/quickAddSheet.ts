@@ -2,6 +2,13 @@ import { expect, vi } from 'vitest'
 import type { Locator } from 'vitest/browser'
 import { page, userEvent } from 'vitest/browser'
 
+/** An element named the way a reader can find it back in the source. */
+function describeElement(element: Element | null): string {
+  if (!element) return 'nothing'
+  const name = element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 40) ?? ''
+  return `<${element.tagName.toLowerCase()}>${name ? ` "${name}"` : ''}`
+}
+
 /** What the quick-add form can be filled with — the body is optional. */
 export interface NoteDraftInput {
   title: string
@@ -20,14 +27,16 @@ export class QuickAddSheet {
     return page.getByRole('dialog')
   }
 
-  // `exact` matters: "Note" is a prefix of no other label today, but "Title"
-  // and "Note" are both short enough that a future field would collide.
+  // Both labels are short enough that a future field would collide under
+  // substring matching — "Note" is a prefix of "Notes", "Title" of anything.
+  // `browser.locators.exact` in vitest.config.ts is what makes them safe, so
+  // no call site here spells it out.
   get title(): Locator {
-    return page.getByLabelText('Title', { exact: true })
+    return page.getByLabelText('Title')
   }
 
   get body(): Locator {
-    return page.getByLabelText('Note', { exact: true })
+    return page.getByLabelText('Note')
   }
 
   get saveButton(): Locator {
@@ -41,6 +50,18 @@ export class QuickAddSheet {
 
   async save(): Promise<void> {
     await this.saveButton.click()
+  }
+
+  /**
+   * Press Save without waiting for it to become enabled — the tap a user can
+   * make on a greyed-out button, and the only way to find out whether the
+   * platform really refuses it. `force` skips the actionability wait, not the
+   * gesture: Chromium delivers `pointerdown` and then declines to follow it
+   * with a click. Without `force`, `click()` would wait out `actionTimeout`
+   * and fail on "element is not enabled" — which asserts nothing.
+   */
+  async pressSaveIgnoringDisabled(): Promise<void> {
+    await this.saveButton.click({ force: true })
   }
 
   /**
@@ -78,6 +99,26 @@ export class QuickAddSheet {
 
   readonly expectClosed = vi.defineHelper(async (): Promise<void> => {
     await expect.element(this.root).not.toBeInTheDocument()
+  })
+
+  /**
+   * Focus is somewhere inside the sheet — the focus trap's contract.
+   *
+   * The one assertion here that cannot be a locator matcher: `toHaveFocus`
+   * asks about a single element, and a trap is a claim about a subtree. The
+   * read is synchronous on purpose, because the preceding `userEvent.tab()`
+   * has already resolved and "focus is here *now*" is the contract — a
+   * retrying matcher would widen it to "focus arrives here eventually",
+   * which a leaking dialog also satisfies on its way past.
+   *
+   * The failure message names what stole focus, since `expected false to be
+   * true` is useless for this and the answer is always the interesting part.
+   */
+  readonly expectHoldsFocus = vi.defineHelper((): void => {
+    expect(
+      this.root.element().contains(document.activeElement),
+      `focus escaped the sheet — it is on ${describeElement(document.activeElement)}`,
+    ).toBe(true)
   })
 
   /** What the form is holding — the draft survives a dismissal on purpose. */

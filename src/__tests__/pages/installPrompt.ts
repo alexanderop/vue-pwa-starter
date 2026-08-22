@@ -23,12 +23,12 @@ export class InstallPrompt {
   }
 
   get banner(): Locator {
-    return this.appRoot.getByText('Install this app', { exact: true })
+    return this.appRoot.getByText('Install this app')
   }
 
   /** The banner's action — opens the instructions. */
   get installButton(): Locator {
-    return this.appRoot.getByRole('button', { name: 'Install', exact: true })
+    return this.appRoot.getByRole('button', { name: 'Install' })
   }
 
   get laterButton(): Locator {
@@ -41,7 +41,7 @@ export class InstallPrompt {
 
   /** The dialog's action — the one that actually reaches `prompt()`. */
   get confirmButton(): Locator {
-    return this.dialog.getByRole('button', { name: 'Install', exact: true })
+    return this.dialog.getByRole('button', { name: 'Install' })
   }
 
   async openDialog(): Promise<void> {
