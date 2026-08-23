@@ -28,6 +28,7 @@ export const SWEEPS = {
   installBanner: 'the install banner',
   installDialog: 'the install dialog',
   updateBanner: 'the update banner',
+  offlineBanner: 'the offline banner',
 } as const
 
 export type SweepId = keyof typeof SWEEPS
@@ -43,12 +44,16 @@ export type SweepId = keyof typeof SWEEPS
 export const A11Y_COVERAGE = {
   'App.vue': 'notesHome',
   'components/organisms/OrganismAppShell.vue': 'notesHome',
+  'components/organisms/OrganismBottomNav.vue': 'notesHome',
   'components/molecules/MoleculePageHeader.vue': 'settings',
   'components/templates/TemplatePageLayout.vue': 'settings',
   'components/organisms/OrganismPwaInstallDialog.vue': 'installDialog',
   'components/organisms/OrganismPwaInstallPrompt.vue': 'installBanner',
   'components/molecules/MoleculePwaUpdatePrompt.vue': 'updateBanner',
   'components/molecules/MoleculeToastViewport.vue': 'toast',
+  'components/molecules/MoleculeAlert.vue': 'offlineBanner',
+  'components/molecules/MoleculeEmptyState.vue': 'notesHome',
+  'components/organisms/OrganismOfflineBanner.vue': 'offlineBanner',
   'features/notes/components/NoteCard.vue': 'notesHomeWithNote',
   'features/notes/components/QuickAddNoteSheet.vue': 'quickAdd',
   'views/NotesView.vue': 'notesHome',
@@ -56,11 +61,32 @@ export const A11Y_COVERAGE = {
 } satisfies Readonly<Record<string, SweepId>>
 
 /**
- * Components deliberately left out of the a11y tier, each with the reason.
+ * Components whose axe coverage is their Storybook story rather than an app
+ * sweep, each naming the story that carries it.
  *
- * A reason is not "it is hard to mount". If a component renders for a user,
- * it can be swept — the entries that belong here are the ones where the sweep
- * would grade something other than the shipped UI. Keep this map short; a
- * growing skip list is the finding, not the fix.
+ * Not a skip. A component with no call site cannot be reached by a sweep over
+ * the running app, but its story runs axe in both palettes under exactly the
+ * rules this tier applies — so it is graded, just somewhere else. Filing that
+ * as an absence is what makes a skip list stop meaning "ungraded", and then
+ * the genuinely ungraded component hides among the excuses.
+ *
+ * `architecture/a11yCoverage.test.ts` checks each entry names a story file
+ * that exists, so this cannot quietly become a second skip list. Delete an
+ * entry the moment a view composes the component — the sweep is stronger.
  */
-export const A11Y_SKIPPED: Readonly<Record<string, string>> = {}
+export const A11Y_BY_STORY = {
+  'components/molecules/MoleculeSearchField.vue': 'MoleculeSearchField.stories.ts',
+  'components/molecules/MoleculeSwipeableRow.vue': 'MoleculeSwipeableRow.stories.ts',
+  'components/organisms/OrganismPullToRefresh.vue': 'OrganismPullToRefresh.stories.ts',
+} satisfies Readonly<Record<string, string>>
+
+/**
+ * Components deliberately left out of the a11y tier altogether, each with the
+ * reason.
+ *
+ * A reason is not "it is hard to mount", and it is not "a story covers it" —
+ * that is `A11Y_BY_STORY` above. What belongs here is a component where a
+ * sweep would grade something other than the shipped UI. Empty today, and kept
+ * so the next one has a home that forces the reason to be written down.
+ */
+export const A11Y_SKIPPED = {} satisfies Readonly<Record<string, string>>

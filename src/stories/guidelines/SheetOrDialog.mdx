@@ -1,0 +1,103 @@
+import { Meta, Title, Subtitle } from '@storybook/addon-docs/blocks'
+
+<Meta title="Guidelines/Sheet or dialog" />
+
+<div className="mx-auto max-w-3xl select-text space-y-10 py-8">
+  <header className="space-y-3">
+    <Title>Sheet or dialog</Title>
+    <Subtitle>Which surface to reach for, on which viewport, with which way out.</Subtitle>
+    <div className="text-footnote text-muted-foreground">
+      A props table can say what a component accepts. It cannot say when you should have reached for
+      the other one, which is the decision that actually goes wrong.
+    </div>
+  </header>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">The short answer</h2>
+  <div className="text-callout text-muted-foreground">
+    On a phone, almost everything is a sheet. <code>MoleculeDialog</code> already knows this: below{' '}
+    <code>sm</code> it renders as a bottom sheet with a drag handle and an upward{' '}
+    <code>shadow-sheet</code>, and from <code>sm</code> up it becomes a centred dialog with{' '}
+    <code>shadow-overlay</code>. Reaching for a dialog on mobile does not get you a dialog; it gets
+    you the sheet with different words around it.
+  </div>
+</section>
+
+<section className="space-y-4">
+  <h2 className="text-section-title font-semibold">The three questions</h2>
+  {[
+    [
+      'Is the task modal?',
+      'If the rest of the screen must not be touched until this resolves — a destructive confirmation, a required choice — it is modal, and it gets a scrim. If the user could reasonably keep scrolling, it is not a sheet or a dialog at all; it is a section, an inline form, or a toast.',
+    ],
+    [
+      'How much content is there?',
+      'One sentence and two buttons is a dialog. A form, a list to pick from, or anything that scrolls is a sheet: the sheet is capped at the keyboard-adjusted viewport height and scrolls its body, so the submit button stays reachable with the keyboard open. A dialog that scrolls on a phone is a sheet that has not admitted it.',
+    ],
+    [
+      'What is the way out?',
+      'A sheet is dismissed by tapping the scrim or swiping down, and its corner close button is hidden below sm because it competes with the drag handle. A dialog keeps the corner close. Both answer Escape and both return focus to the trigger — that part is not a choice.',
+    ],
+  ].map(([question, answer]) => (
+    <article key={question} className="rounded-lg border p-4">
+      <h3 className="text-label">{question}</h3>
+      <p className="mt-2 text-callout text-muted-foreground">{answer}</p>
+    </article>
+  ))}
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">Which primitive</h2>
+  <div className="overflow-x-auto rounded-lg border">
+    <table className="w-full text-left text-callout">
+      <thead className="bg-muted/50 text-label">
+        <tr>
+          <th className="p-3">Surface</th>
+          <th className="p-3">Use it for</th>
+          <th className="p-3">Elevation</th>
+        </tr>
+      </thead>
+      <tbody className="text-muted-foreground">
+        <tr className="border-t">
+          <td className="p-3">
+            <code>MoleculeDialog</code>
+          </td>
+          <td className="p-3">
+            Confirmations, short forms, anything that is a dialog on a wide screen
+          </td>
+          <td className="p-3">
+            <code>shadow-sheet sm:shadow-overlay</code>
+          </td>
+        </tr>
+        <tr className="border-t">
+          <td className="p-3">
+            <code>MoleculeNumericInput</code>
+          </td>
+          <td className="p-3">A number entered with a thumb: keypad, presets, swipe-to-dismiss</td>
+          <td className="p-3">
+            <code>shadow-sheet</code>
+          </td>
+        </tr>
+        <tr className="border-t">
+          <td className="p-3">Toast</td>
+          <td className="p-3">Something already happened and needs no decision</td>
+          <td className="p-3">
+            <code>shadow-overlay</code>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+  <section className="space-y-3">
+    <h2 className="text-section-title font-semibold">The keyboard</h2>
+    <div className="text-callout text-muted-foreground">
+      A sheet with a field in it sits at <code>bottom: var(--keyboard-inset, 0px)</code> and caps its
+      height at <code>calc(100dvh - var(--keyboard-inset))</code>, so the on-screen keyboard pushes it
+      up rather than burying it. Turn the <strong>Keyboard open</strong> toolbar control on and open
+      any sheet story to see it. That is a design aid — the real behaviour is proved on a device, and{' '}
+      <code>docs/design-system.md</code> says so.
+    </div>
+  </section>
+</div>

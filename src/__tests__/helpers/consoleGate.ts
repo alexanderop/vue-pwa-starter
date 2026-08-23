@@ -33,6 +33,11 @@ const ALLOWED = [
   // files that are not on disk. Logged by Vite, once per browser-tier file,
   // and unrelated to anything under test.
   /Sourcemap for .* points to missing source files/,
+  // Storybook compiles Vue render templates inside its browser transform. Vue
+  // receives the browser-only decodeEntities hook during that transform and
+  // reports that its non-browser compiler pass ignores it; rendered output is
+  // unchanged and the warning originates outside application code.
+  /\[@vue\/compiler-core\] decodeEntities option is passed but will be ignored in non-browser builds/,
 ] as const
 
 /**

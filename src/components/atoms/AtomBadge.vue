@@ -18,12 +18,19 @@ import { cn } from '@/lib/utils'
  *
  * `[a&]:` in the variants is Tailwind's "when this element is an `<a>`" —
  * the hover states apply only to the `as-child` link form, so a static badge
- * does not light up under a mouse for no reason. That is also why the
- * touchConventions rule does not read these as hover-only controls: they are
- * not controls.
+ * does not light up under a mouse for no reason.
+ *
+ * That link form does need a press, though, and for a while it did not have
+ * one: Tailwind gates `hover:` behind `@media (hover: hover)`, so a badge-link
+ * answered a tap with nothing at all on a phone. The base carries
+ * `[a&]:active:opacity-80` for it — opacity rather than a scale, because a
+ * badge sits inline in a row of text and a scaling one shoves its neighbours.
+ * `opacity` is in the transition list for the same reason `scale` has to be
+ * named where it is used: a list that does not name the property it animates
+ * makes the state snap.
  */
 const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-colors [&>svg]:pointer-events-none [&>svg:not([class*='size-'])]:size-3",
+  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,background-color,opacity] duration-(--duration-fast) [a&]:active:opacity-80 [&>svg]:pointer-events-none [&>svg:not([class*='size-'])]:size-3",
   {
     variants: {
       variant: {
@@ -31,7 +38,8 @@ const badgeVariants = cva(
         secondary:
           'border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
         outline: 'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
-        destructive: 'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90',
+        destructive:
+          'border-transparent bg-destructive text-destructive-foreground [a&]:hover:bg-destructive/90',
       },
     },
     defaultVariants: {

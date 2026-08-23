@@ -163,6 +163,22 @@ velocity dismissal) and it is already in `node_modules`; migrating
 `MoleculeDialogContent` to it is the real fix and is an API change rather than a CSS
 one.
 
+## Where each convention now lives
+
+The conventions above are the rules; these are the components that already
+carry them, so a new screen inherits them instead of re-deriving them:
+
+| Convention                       | Carried by                                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Press feedback                   | `AtomButton`'s base and its `nav` variant                                                                                |
+| Touch-first sizing               | Every atom's `size`; `AtomSlider`'s thumb widens with `::after`                                                          |
+| Selection and callouts           | `src/style.css` base layer, with the field exemption                                                                     |
+| Clamped insets                   | The `safe-area-*` utilities; `MoleculeSheetContent` sets the floor                                                       |
+| Never draw an unwired affordance | `MoleculeSheet` (a handle that drags), `MoleculeSwipeableRow` and `OrganismPullToRefresh` (a non-gesture path, asserted) |
+
+`Guidelines/Touch` in the catalogue renders these against the real components.
+It links here rather than restating any of it — the rules live in one file.
+
 ## What no tier can tell you
 
 `env()` is 0 in every headless Chromium, overscroll _chaining_ needs a real
@@ -186,13 +202,19 @@ mechanism works, one static rule that it is applied everywhere. Neither
 substitutes for the other. A per-control spec does not scale to the next
 control someone adds, and a static rule does not prove the mechanism.
 
-| Convention             | Behavioral                                          | Static                                  |
-| ---------------------- | --------------------------------------------------- | --------------------------------------- |
-| Press feedback         | none, see below                                     | `architecture/touchConventions.test.ts` |
-| Touch-first sizing     | `touch/touchTargets.spec.ts`                        | the same file, for the button base      |
-| Selection and callouts | `components/touchConventions.spec.ts`               | none                                    |
-| Clamped insets         | `components/molecules/dialog/dialogContent.spec.ts` | `architecture/touchConventions.test.ts` |
-| Reduced motion         | none                                                | presence check, and it says so          |
+| Convention             | Behavioral                                                      | Static                                  |
+| ---------------------- | --------------------------------------------------------------- | --------------------------------------- |
+| Press feedback         | none, see below                                                 | `architecture/touchConventions.test.ts` |
+| Touch-first sizing     | app sweep in `touchTargets.spec.ts`; isolated component stories | the same file, for the button base      |
+| Selection and callouts | `components/touchConventions.spec.ts`                           | none                                    |
+| Clamped insets         | `MoleculeDialog.stories.ts`                                     | `architecture/touchConventions.test.ts` |
+| Reduced motion         | none                                                            | presence check, and it says so          |
+
+Component-specific coarse-pointer contracts, such as the numeric drawer's
+keypad size, reachability, swipe affordance and lack of a hidden input, live
+in a story tagged `touch`. The standalone touch tier keeps the whole-app sweep
+and the quick-add screen's focus branch; Storybook owns isolated component
+behavior even when the required browser context is mobile.
 
 Press feedback gets no behavioral test on purpose. `:active` is UA-driven and
 cannot be dispatched (`userEvent` has `click`, `dblClick` and `hover` but no

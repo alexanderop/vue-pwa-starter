@@ -152,6 +152,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  storybook:
+    name: Storybook build + tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          playwright: 'true'
+      - run: pnpm build:storybook
+      - run: pnpm test:storybook
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vitest-traces-storybook
+          path: .vitest/traces
+          if-no-files-found: ignore
+          retention-days: 7
+
   # The visual tier is a local tool by default: its screenshot baselines are
   # platform-specific (font rendering differs between macOS and Linux). To
   # run it in CI, generate Linux baselines once from a CI artifact and commit

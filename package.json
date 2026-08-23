@@ -21,6 +21,8 @@
     "test:touch": "vitest run --project=touch",
     "test:visual": "vitest run --project=visual",
     "test:visual:update": "vitest run --project=visual --update",
+    "test:storybook": "vitest run --project='storybook-*'",
+    "test:storybook:touch": "vitest run --project=storybook-touch",
     "test:arch": "vitest run --project=arch",
     "test:lint-rules": "vitest run --project=lint-rules",
     "ast": "node --experimental-strip-types tools/oxlint/ast.ts",
@@ -29,6 +31,8 @@
     "test:e2e": "run-s build-only test:e2e:prebuilt",
     "test:e2e:prebuilt": "bddgen && playwright test",
     "type-check": "vue-tsc --build",
+    "storybook": "storybook dev -p 6006",
+    "build:storybook": "storybook build",
     "lint:oxlint": "oxlint . --fix --ignore-path .gitignore",
     "lint:oxlint:check": "oxlint . --ignore-path .gitignore",
     "lint:eslint": "eslint . --fix --cache",
@@ -64,6 +68,12 @@
   "devDependencies": {
     "@e18e/eslint-plugin": "catalog:lint",
     "@effect/vitest": "catalog:testing",
+    "@storybook/addon-a11y": "catalog:storybook",
+    "@storybook/addon-docs": "catalog:storybook",
+    "@storybook/addon-themes": "catalog:storybook",
+    "@storybook/addon-vitest": "catalog:storybook",
+    "@storybook/builder-vite": "catalog:storybook",
+    "@storybook/vue3-vite": "catalog:storybook",
     "@oxlint/plugins": "catalog:lint",
     "@playwright/test": "catalog:testing",
     "@size-limit/file": "catalog:lint",
@@ -98,6 +108,7 @@
     "playwright-bdd": "catalog:testing",
     "prettier": "catalog:lint",
     "size-limit": "catalog:lint",
+    "storybook": "catalog:storybook",
     "tw-animate-css": "catalog:ui",
     "typescript": "catalog:build",
     "vite": "catalog:build",
@@ -112,7 +123,7 @@
     {
       "name": "production JavaScript",
       "path": "dist/assets/*.js",
-      "limit": "172 kB"
+      "limit": "183 kB"
     }
   ],
   "lint-staged": {

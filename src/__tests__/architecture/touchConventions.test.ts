@@ -139,9 +139,36 @@ function openingTags(template: string): Array<OpeningTag> {
   return tags
 }
 
+/**
+ * Tag names that are a control whatever attributes they carry.
+ *
+ * The primitive layer wraps reka headless components that render a button but
+ * take no `@click` and no `type="button"` — so an attribute-only test walked
+ * straight past `Toggle`, `TabsTrigger` and a `Primitive` rendered `as` a
+ * button, which between them are most of the pressable surfaces added by the
+ * mobile inventory.
+ */
+const CONTROL_TAGS = new Set([
+  'button',
+  'Toggle',
+  'TabsTrigger',
+  'RadioGroupItem',
+  'CheckboxRoot',
+  'SliderThumb',
+  'DrawerTrigger',
+  'DialogTrigger',
+  'DrawerClose',
+  'DialogClose',
+])
+
 /** Does this tag look like something a user taps? */
-function isControl(attributes: string): boolean {
-  return /@click\b|v-on:click\b/.test(attributes) || attributes.includes('type="button"')
+function isControl(tag: { name: string; attributes: string }): boolean {
+  if (CONTROL_TAGS.has(tag.name)) return true
+  if (/@click\b|v-on:click\b/.test(tag.attributes)) return true
+  if (tag.attributes.includes('type="button"')) return true
+
+  // `<Primitive as="button">` / `as-child` over a control.
+  return /\bas="(?:button|a)"|\bas-child\b/.test(tag.attributes)
 }
 
 /**
@@ -157,7 +184,7 @@ function classText(attributes: string): string {
 
 export function hoverOnlyControls(template: string): Array<string> {
   return openingTags(template)
-    .filter((tag) => isControl(tag.attributes))
+    .filter((tag) => isControl(tag))
     .filter((tag) => {
       const classes = classText(tag.attributes)
       return classes.includes('hover:') && !classes.includes('active:')
@@ -165,11 +192,34 @@ export function hoverOnlyControls(template: string): Array<string> {
     .map((tag) => tag.name)
 }
 
-/** Controls that answer a press — what proves the rule above sees real input. */
+/** Controls that answer a press in their own class list. */
 export function pressableControls(template: string): Array<string> {
   return openingTags(template)
-    .filter((tag) => isControl(tag.attributes) && classText(tag.attributes).includes('active:'))
+    .filter((tag) => isControl(tag) && classText(tag.attributes).includes('active:'))
     .map((tag) => tag.name)
+}
+
+/**
+ * Whether a component styles a hover anywhere and a press nowhere.
+ *
+ * The template scan cannot see a cva table — a variant's states live in a
+ * quoted string in the script block, which is where `AtomButton` and
+ * `AtomBadge` keep theirs. Graded per *file* rather than per string on
+ * purpose: cva splits a control's styling across a base and its variants, so
+ * `hover:bg-primary/90` in a variant is answered by `active:scale-[0.97]` in
+ * the base beside it, and a per-string rule would report every well-written
+ * variant in the repo.
+ *
+ * Reuses the `quotedStrings(stripComments(…))` machinery that
+ * `unanimatedPressStates` already proves works on a cva table.
+ */
+export function stylesHoverWithoutPress(source: string): boolean {
+  const strings = quotedStrings(stripComments(source))
+
+  return (
+    strings.some((text) => /(?:^|[\s:[])hover:/.test(text)) &&
+    !strings.some((text) => text.includes('active:'))
+  )
 }
 
 function stripComments(source: string): string {
@@ -230,7 +280,17 @@ export function unanimatedPressStates(source: string): Array<string> {
  * a comment shape. Empty today, and kept so the next one has a home that
  * forces the reason to be written down.
  */
-const HOVER_ONLY_ALLOWED: Readonly<Record<string, string>> = {}
+const HOVER_ONLY_ALLOWED = {
+  // Two keys for one control: the template scan reports a tag, the file-level
+  // cva scan reports a file, and the exemption is the same either way.
+  'components/molecules/dialog/MoleculeDialogContent.vue':
+    'Its only hover state is the corner close button — see the entry below.',
+  'components/molecules/dialog/MoleculeDialogContent.vue: <DialogClose>':
+    'The corner close button is `hidden sm:block` — it exists only from the ' +
+    'breakpoint up, which is where a pointer that can hover is. Below `sm` ' +
+    'the surface is a sheet dismissed by tapping the scrim, and this control ' +
+    'is not rendered at all, so there is no tap for it to answer.',
+} satisfies Readonly<Record<string, string>>
 
 // --- the rules ------------------------------------------------------------
 
@@ -287,8 +347,31 @@ describe('new controls cannot ship hover-only', () => {
   it('sees controls that do answer a press', () => {
     // Otherwise the rule below is green because it found nothing to grade —
     // the a11yCoverage lesson.
+    //
+    // This went to zero once, when the last hand-rolled tab became
+    // `AtomButton variant="nav"` and the press states moved into a cva table.
+    // The answer was to teach `isControl` about the primitive tags that render
+    // a control without an `@click` — `Toggle`, `TabsTrigger`, a `Primitive`
+    // rendered `as="button"` — rather than to weaken the canary, which is what
+    // was done first and left six new pressable surfaces ungraded.
     const pressable = templates.flatMap((file) => pressableControls(file.source))
     expect(pressable.length).toBeGreaterThan(0)
+  })
+
+  it('has no component that styles a hover and no press at all', () => {
+    // The other half of the rule below, for the states a template scan cannot
+    // reach: a cva table styles a hover, and the press that answers it is in
+    // the base string beside it — or nowhere in the file.
+    const offenders = templates
+      .filter((file) => stylesHoverWithoutPress(file.source))
+      .map((file) => file.id)
+      .filter((id) => !(id in HOVER_ONLY_ALLOWED))
+
+    expect(
+      offenders,
+      `These components style a hover and answer a tap with nothing anywhere. Tailwind v4\n` +
+        `gates hover: behind @media (hover: hover), so on a phone none of it fires:\n${list(offenders)}`,
+    ).toEqual([])
   })
 
   it('has no control with a hover: state and no active: state', () => {
@@ -308,11 +391,15 @@ describe('new controls cannot ship hover-only', () => {
   })
 
   it('has no stale entries in the allowlist', () => {
-    const present = new Set(
-      templates.flatMap((file) =>
+    // Both shapes of key: the template scan reports `file: <Tag>`, the
+    // file-level cva scan reports `file`. An allowlist that only knew about
+    // the first would call every entry of the second stale.
+    const present = new Set([
+      ...templates.flatMap((file) =>
         hoverOnlyControls(file.source).map((tag) => `${file.id}: <${tag}>`),
       ),
-    )
+      ...templates.filter((file) => stylesHoverWithoutPress(file.source)).map((file) => file.id),
+    ])
     const stale = Object.keys(HOVER_ONLY_ALLOWED).filter((id) => !present.has(id))
 
     expect(stale, `These controls no longer ship hover-only. Drop them:\n${list(stale)}`).toEqual(

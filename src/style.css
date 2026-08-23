@@ -26,6 +26,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -36,6 +37,21 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
 
+  /* Elevation tokens - --shadow-* generates shadow-* utilities (shadow-sheet).
+     Two-layer like the colours above, and for the same reason: `@theme inline`
+     inlines a token's value into the generated utility, so a value written
+     here directly could not be overridden by `.dark`. Inlining a `var()` keeps
+     the indirection, and the real values live on :root and .dark below.
+
+     Five levels, each named for the role that owns it. A sixth level is a
+     design change and needs a reason recorded in docs/design-system.md, not a
+     new literal at a call site. */
+  --shadow-raised: var(--elevation-raised); /* a card resting on the background */
+  --shadow-sticky: var(--elevation-sticky); /* a header or tab bar with content scrolled under it */
+  --shadow-floating: var(--elevation-floating); /* the FAB, a switch thumb */
+  --shadow-sheet: var(--elevation-sheet); /* a bottom sheet or drawer - points *up* */
+  --shadow-overlay: var(--elevation-overlay); /* a dialog, menu, or toast */
+
   /* Spacing tokens - --spacing-* generates gap-*, space-y-*, p-*, etc. utilities */
   --spacing-section: 1.5rem; /* vertical rhythm between page sections (space-y-section) */
 
@@ -43,11 +59,54 @@
      utilities resolve them (h-touch-target, size-touch-target) */
   --spacing-touch-target: 2.75rem; /* minimum hit area for mobile controls */
 
-  /* Typography tokens - --text-* generates text-* font-size utilities */
+  /* Layout constants - the shell geometry, so anything that has to sit above
+     the tab bar or below the header can address it instead of guessing.
+     Both heights are the *content box* and exclude safe-area insets: the
+     safe-area-* utilities add those on top, so a token that silently included
+     them could not be used in a calc() alongside them without double-paying. */
+  --spacing-nav-height: 4.25rem; /* bottom tab bar (h-nav-height) */
+  --spacing-header-height: 3.25rem; /* page header (min-h-header-height) */
+  --spacing-gutter: 1rem; /* screen-edge horizontal padding (px-gutter) */
+
+  /* Typography tokens - --text-* generates text-* font-size utilities, and the
+     --line-height / --font-weight modifiers make a size carry its own vertical
+     rhythm and weight rather than needing a companion class.
+
+     The scale is semantic, not numeric: there is no `lg` rung whose name says
+     nothing about where it belongs. */
   --text-page-title: 1.875rem; /* route-level h1 (text-page-title) */
   --text-page-title--line-height: 1.2;
   --text-section-title: 1.125rem; /* in-page h2/h3 section headings (text-section-title) */
   --text-section-title--line-height: 1.5;
+  --text-body: 1rem; /* running prose and note content */
+  --text-body--line-height: 1.5;
+  --text-callout: 0.9375rem; /* secondary prose inside a card or row */
+  --text-callout--line-height: 1.4;
+  --text-label: 0.875rem; /* form labels, list-row titles, button text */
+  --text-label--line-height: 1.25;
+  --text-label--font-weight: 500;
+  --text-footnote: 0.8125rem; /* supporting text under a row or field */
+  --text-footnote--line-height: 1.4;
+  --text-caption: 0.75rem; /* tab labels, badges, timestamps */
+  --text-caption--line-height: 1.3333;
+  --text-caption--font-weight: 500;
+}
+
+/* Declared in a plain `@theme`, not `@theme inline`: the `@utility` blocks
+   further down read these back with `var()`, and `inline` emits no custom
+   property for them to read. */
+@theme {
+  /* The system stack, chosen rather than inherited. Byte-identical to
+     Tailwind's own default today - naming it is what makes a later change to
+     it a decision instead of an upgrade side effect. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  /* Easings - --ease-* generates ease-* utilities (ease-out-expo). */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1); /* sheet enter */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* reka Drawer enter */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* everything else */
 }
 
 :root {
@@ -67,13 +126,74 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.59 0.2 142);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.52 0.18 142);
   --success-foreground: oklch(0.985 0 0);
   --warning: oklch(0.75 0.18 55);
   --warning-foreground: oklch(0.25 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+
+  /* Elevation, light theme. Consumed as shadow-raised … shadow-overlay; the
+     `--shadow-*` aliases are in `@theme inline` above.
+
+     --elevation-sheet points *upward* on purpose. A bottom sheet occludes the
+     content above it, not below it, and a downward shadow on a
+     bottom-anchored surface is the single most common tell that a web app is
+     imitating a native one.
+
+     --elevation-sticky has no vertical offset at all, for the other half of
+     that idea. One token has to serve a header at the top edge and a tab bar
+     at the bottom edge, and content scrolls *under* both — from below in one
+     case and from above in the other. A directional shadow is right for
+     exactly one of them and invisible on the other, so this one is a halo:
+     blur with a negative spread, no offset, correct at either edge. */
+  --elevation-raised: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --elevation-sticky: 0 0 12px -2px oklch(0 0 0 / 0.16);
+  --elevation-floating: 0 6px 16px -4px oklch(0 0 0 / 0.16), 0 2px 6px -2px oklch(0 0 0 / 0.1);
+  --elevation-sheet: 0 -8px 24px -8px oklch(0 0 0 / 0.18), 0 -1px 3px -1px oklch(0 0 0 / 0.08);
+  --elevation-overlay: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+
+  /* Durations. `duration-*` is *not* a documented Tailwind theme namespace —
+     the compiled source resolves it against an undocumented
+     `--transition-duration-*`, which this repository does not build on. These
+     are plain custom properties, consumed through the documented
+     `utility-(<custom-property>)` syntax: duration-(--duration-fast).
+
+     Entrance and exit are separate tokens because they are not symmetric: a
+     dismissal should feel faster than a presentation. The keyframes below
+     already encoded that asymmetry; these names are what make it a decision.
+
+     The prefers-reduced-motion block at the bottom of this file overrides
+     every duration globally and is deliberately not narrowed to these. */
+  --duration-instant: 100ms; /* press feedback */
+  --duration-fast: 150ms; /* colour, opacity, small state changes */
+  --duration-base: 200ms; /* in-place layout and size changes */
+  --duration-sheet-in: 300ms; /* sheet and drawer entrance */
+  --duration-sheet-out: 240ms; /* sheet and drawer exit */
+
+  /* Layering. Also not a namespace; consumed as z-(--z-nav).
+
+     The ordering is the contract. Reka portals overlay content to <body>, so
+     the scrim and the surface it dims must stay adjacent and above every
+     in-document level — and the toast has to clear both. */
+  --z-sticky: 10; /* sticky page header */
+  --z-nav: 20; /* bottom tab bar */
+  --z-floating: 30; /* FAB, bottom-anchored prompts */
+  --z-overlay: 40; /* scrim behind a sheet or dialog */
+  --z-sheet: 50; /* sheet, drawer, dialog surface */
+  --z-toast: 60; /* toast viewport, above everything */
+
+  /* Platform insets. These three are a public token contract, not internals:
+     the safe-area-* utilities below clamp env() against the two `-min`
+     floors, and useKeyboardInset writes --keyboard-inset onto <html> from
+     visualViewport. Declared here so a call site can see them and a decorator
+     can override them; every consumer still carries its own fallback, so a
+     value removed at runtime degrades to zero rather than to `invalid`. */
+  --safe-top-min: 0px;
+  --safe-bottom-min: 0px;
+  --keyboard-inset: 0px;
 }
 
 .dark {
@@ -99,6 +219,7 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.145 0 0);
   --success: oklch(0.7 0.17 142);
   --success-foreground: oklch(0.145 0 0);
   --warning: oklch(0.8 0.16 75);
@@ -106,6 +227,19 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
+
+  /* Elevation, dark theme — the same five names, different values.
+
+     A black shadow on a near-black surface is invisible, and reusing the light
+     values here is the reason most dark interfaces look flat. Dark elevation
+     is carried by a hairline light ring on the surface's own edge, with a soft
+     ambient shadow beneath it once the surface is genuinely above the page.
+     Alpha rises with the level, which is what makes the five read as a ladder. */
+  --elevation-raised: 0 0 0 1px oklch(1 0 0 / 0.06);
+  --elevation-sticky: 0 0 0 1px oklch(1 0 0 / 0.08), 0 0 12px -2px oklch(0 0 0 / 0.5);
+  --elevation-floating: 0 0 0 1px oklch(1 0 0 / 0.12), 0 6px 16px -4px oklch(0 0 0 / 0.55);
+  --elevation-sheet: 0 -1px 0 0 oklch(1 0 0 / 0.12), 0 -8px 24px -8px oklch(0 0 0 / 0.6);
+  --elevation-overlay: 0 0 0 1px oklch(1 0 0 / 0.12), 0 10px 24px -6px oklch(0 0 0 / 0.6);
 }
 
 @layer base {
@@ -146,6 +280,41 @@
     -webkit-user-select: text;
     user-select: text;
   }
+}
+
+/* The focus ring, in one place.
+   Written out at fourteen call sites before this existed, which is fourteen
+   chances to ship a control with a two-pixel ring in a slightly different
+   colour — or with none at all. `outline-hidden` is not optional beside it:
+   without it the browser's own outline draws under the ring.
+
+   The `-inset` variant is for a control whose ring would otherwise be clipped
+   by an ancestor's `overflow: hidden` — a list row, a tab, a scroll region. */
+@utility focus-ring {
+  @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring;
+}
+
+@utility focus-ring-inset {
+  @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset;
+}
+
+/* The scrim behind a modal surface. Identical in the dialog, the sheet and the
+   numeric-input drawer; the reka primitive under each differs, so the
+   component cannot be shared, but the paint can. */
+@utility overlay-scrim {
+  @apply fixed inset-0 z-(--z-overlay) bg-black/50;
+  @apply data-[state=open]:animate-in data-[state=open]:fade-in-0;
+  @apply data-[state=closed]:animate-out data-[state=closed]:fade-out-0;
+}
+
+/* The scrolling body of a sheet or dialog.
+   `min-h-0` is the load-bearing part: a flex item defaults to
+   `min-height: auto` and refuses to shrink, so without it the surface grows
+   past the viewport instead of scrolling inside it — and the submit button
+   ends up under the keyboard. The negative margin plus matching padding is
+   what stops a focus ring being clipped at the scroll edge. */
+@utility scroll-region {
+  @apply -mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1;
 }
 
 /* Padding for elements pinned to the bottom edge, so they clear the home
@@ -194,12 +363,39 @@
   }
 }
 
+/* Two sheet mechanisms, one pair of timings. Both used to carry their own
+   near-miss numbers (0.25s/0.2s here, 0.3s/0.24s below) and an unnamed
+   cubic-bezier; the tokens are what stop the app having two different ideas of
+   how fast a sheet is. */
 @utility animate-slide-up-mobile {
-  animation: slide-up-mobile 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slide-up-mobile var(--duration-sheet-in) var(--ease-out-expo);
 }
 
 @utility animate-slide-down-mobile {
-  animation: slide-down-mobile 0.2s ease-in;
+  animation: slide-down-mobile var(--duration-sheet-out) ease-in;
+}
+
+/* Reka Drawer owns the live swipe offset through `transform`. Enter/exit
+   therefore animate the independent `translate` property so a finger-driven
+   transform is never replaced mid-gesture. */
+@keyframes drawer-up {
+  from {
+    translate: 0 100%;
+  }
+}
+
+@keyframes drawer-down {
+  to {
+    translate: 0 100%;
+  }
+}
+
+@utility animate-drawer-up {
+  animation: drawer-up var(--duration-sheet-in) var(--ease-drawer);
+}
+
+@utility animate-drawer-down {
+  animation: drawer-down var(--duration-sheet-out) ease-in;
 }
 
 /* We ship the sheet keyframes above and a press transform on every button and

@@ -26,9 +26,10 @@ import { SettingsScreen } from './pages/settingsScreen'
  * in step. `onCleanup` may be called **once** per fixture — a fixture that
  * needs two teardowns is two fixtures.
  *
- * Only app-wide screens live here. A harness specific to one spec (the stub
- * router in `components/appShell.spec.ts`, the tall sheet in
- * `dialogContent.spec.ts`) is a fixture in that spec, extending this one.
+ * Only app-wide screens live here. Isolated component setup belongs in its
+ * Storybook render function; a boundary harness specific to one standalone
+ * spec stays local to that spec and extends this fixture only when it needs an
+ * app screen too.
  */
 export const it = test
   .extend('notes', async ({}, { onCleanup }) => {

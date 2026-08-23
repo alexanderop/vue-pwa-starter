@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Download, Smartphone, Upload } from '@lucide/vue'
+import { ChevronLeft, Download, Smartphone, Upload } from '@lucide/vue'
 import { Effect } from 'effect'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TemplatePageLayout from '@/components/templates/TemplatePageLayout.vue'
 import OrganismPwaInstallDialog from '@/components/organisms/OrganismPwaInstallDialog.vue'
-import AtomButton from '@/components/atoms/AtomButton.vue'
+import { MoleculeList, MoleculeListRow, MoleculeListSection } from '@/components/molecules/list'
 import AtomLabel from '@/components/atoms/AtomLabel.vue'
 import AtomSelect from '@/components/atoms/AtomSelect.vue'
 import AtomSpinner from '@/components/atoms/AtomSpinner.vue'
@@ -130,82 +130,118 @@ async function handleImportFile(event: Event): Promise<void> {
 
 <template>
   <TemplatePageLayout :title="t('settings.title')" :show-back="false">
-    <div class="mx-auto flex w-full max-w-lg flex-col gap-section p-4">
-      <section class="flex flex-col gap-3">
-        <h2 class="text-section-title font-semibold">{{ t('settings.appearance.title') }}</h2>
-        <div class="flex min-h-touch-target items-center justify-between rounded-lg border p-4">
-          <AtomLabel for="dark-mode-switch">{{ t('settings.appearance.darkMode') }}</AtomLabel>
-          <AtomSwitch id="dark-mode-switch" v-model="isDark" />
-        </div>
-      </section>
+    <!-- Rows, not a page of bordered boxes. Every group here is the same
+         shape — a heading and some settings — and it was being spelled out
+         four times with slightly different padding each time. -->
+    <div class="mx-auto flex w-full max-w-lg flex-col gap-section p-gutter">
+      <MoleculeListSection>
+        <template #heading>
+          <h2 class="text-section-title font-semibold">{{ t('settings.appearance.title') }}</h2>
+        </template>
+        <MoleculeList>
+          <MoleculeListRow>
+            <AtomLabel for="dark-mode-switch">{{ t('settings.appearance.darkMode') }}</AtomLabel>
+            <template #trailing><AtomSwitch id="dark-mode-switch" v-model="isDark" /></template>
+          </MoleculeListRow>
+        </MoleculeList>
+      </MoleculeListSection>
 
-      <section class="flex flex-col gap-3">
-        <h2 class="text-section-title font-semibold">{{ t('settings.language.title') }}</h2>
-        <div class="rounded-lg border p-4">
-          <AtomLabel class="flex flex-col gap-2" for="locale-select">
-            {{ t('settings.language.label') }}
-            <AtomSelect
-              id="locale-select"
-              :model-value="locale"
-              @update:model-value="handleLocaleChange"
-            >
-              <option v-for="code in supportedLocales" :key="code" :value="code">
-                {{ localeName(code) }}
-              </option>
-            </AtomSelect>
-          </AtomLabel>
-        </div>
-      </section>
+      <MoleculeListSection>
+        <template #heading>
+          <h2 class="text-section-title font-semibold">{{ t('settings.language.title') }}</h2>
+        </template>
+        <MoleculeList>
+          <!-- The select is the row's trailing control rather than a field
+               under a label, so the row keeps the 44px height every other one
+               has. `for`/`id` still ties them together; the label being the
+               row title is what makes that honest. -->
+          <MoleculeListRow>
+            <AtomLabel for="locale-select">{{ t('settings.language.label') }}</AtomLabel>
+            <template #trailing>
+              <AtomSelect
+                id="locale-select"
+                class="w-auto"
+                :model-value="locale"
+                @update:model-value="handleLocaleChange"
+              >
+                <option v-for="code in supportedLocales" :key="code" :value="code">
+                  {{ localeName(code) }}
+                </option>
+              </AtomSelect>
+            </template>
+          </MoleculeListRow>
+        </MoleculeList>
+      </MoleculeListSection>
 
       <!-- Nothing to offer a browser that cannot install and is not installed
            — an "install" row that leads to no instructions is worse than no
            row at all. -->
-      <section v-if="canInstall || isInstalled" class="flex flex-col gap-3">
-        <h2 class="text-section-title font-semibold">{{ t('pwa.install.settings.title') }}</h2>
-        <div class="flex flex-col gap-4 rounded-lg border p-4">
-          <p v-if="isInstalled" class="text-sm text-muted-foreground">
-            {{ t('pwa.install.settings.installed') }}
-          </p>
-          <template v-else>
-            <p class="text-sm text-muted-foreground">
+      <MoleculeListSection v-if="canInstall || isInstalled">
+        <!-- Section-level prose stays at section level. Inside the row it
+             would join the button's accessible name, and "How to install Add
+             this app to your home screen for offline access." is a sentence,
+             not the name of a control. -->
+        <template #heading>
+          <div>
+            <h2 class="text-section-title font-semibold">{{ t('pwa.install.settings.title') }}</h2>
+            <p v-if="!isInstalled" class="mt-1 text-footnote text-muted-foreground">
               {{ t('pwa.install.settings.description') }}
             </p>
-            <div>
-              <AtomButton variant="outline" @click="installDialogOpen = true">
-                <Smartphone />
-                {{ t('pwa.install.settings.action') }}
-              </AtomButton>
-            </div>
-          </template>
-        </div>
-      </section>
-
-      <section class="flex flex-col gap-3">
-        <h2 class="text-section-title font-semibold">{{ t('settings.data.title') }}</h2>
-        <div class="flex flex-col gap-4 rounded-lg border p-4">
-          <p class="text-sm text-muted-foreground">{{ t('settings.data.description') }}</p>
-          <div class="flex flex-wrap gap-2">
-            <AtomButton variant="outline" :disabled="exporting" @click="handleExport">
-              <AtomSpinner v-if="exporting" />
-              <Download v-else />
-              {{ t('settings.data.export') }}
-            </AtomButton>
-            <AtomButton variant="outline" :disabled="importing" @click="fileInput?.click()">
-              <AtomSpinner v-if="importing" />
-              <Upload v-else />
-              {{ t('settings.data.import') }}
-            </AtomButton>
-            <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomInput is a `defineModel<string>` text field; a file input has no string value to bind and this one is `hidden` anyway, driven entirely by the button above it. There is nothing here for the primitive to style. -->
-            <input
-              ref="fileInput"
-              type="file"
-              accept="application/json"
-              class="hidden"
-              @change="handleImportFile"
-            />
           </div>
-        </div>
-      </section>
+        </template>
+        <MoleculeList>
+          <MoleculeListRow v-if="isInstalled">
+            {{ t('pwa.install.settings.installed') }}
+          </MoleculeListRow>
+          <MoleculeListRow v-else as="button" type="button" @click="installDialogOpen = true">
+            <template #leading><Smartphone class="size-5" aria-hidden="true" /></template>
+            {{ t('pwa.install.settings.action') }}
+            <template #trailing>
+              <ChevronLeft class="size-4 rotate-180" aria-hidden="true" />
+            </template>
+          </MoleculeListRow>
+        </MoleculeList>
+      </MoleculeListSection>
+
+      <MoleculeListSection>
+        <template #heading>
+          <div>
+            <h2 class="text-section-title font-semibold">{{ t('settings.data.title') }}</h2>
+            <p class="mt-1 text-footnote text-muted-foreground">
+              {{ t('settings.data.description') }}
+            </p>
+          </div>
+        </template>
+        <MoleculeList>
+          <MoleculeListRow as="button" type="button" :disabled="exporting" @click="handleExport">
+            <template #leading>
+              <AtomSpinner v-if="exporting" class="size-5" />
+              <Download v-else class="size-5" aria-hidden="true" />
+            </template>
+            {{ t('settings.data.export') }}
+          </MoleculeListRow>
+          <MoleculeListRow
+            as="button"
+            type="button"
+            :disabled="importing"
+            @click="fileInput?.click()"
+          >
+            <template #leading>
+              <AtomSpinner v-if="importing" class="size-5" />
+              <Upload v-else class="size-5" aria-hidden="true" />
+            </template>
+            {{ t('settings.data.import') }}
+          </MoleculeListRow>
+        </MoleculeList>
+        <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomInput is a `defineModel<string>` text field; a file input has no string value to bind and this one is `hidden` anyway, driven entirely by the row above it. There is nothing here for the primitive to style. -->
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json"
+          class="hidden"
+          @change="handleImportFile"
+        />
+      </MoleculeListSection>
     </div>
 
     <OrganismPwaInstallDialog v-model:open="installDialogOpen" />

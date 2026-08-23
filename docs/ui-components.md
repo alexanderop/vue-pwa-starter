@@ -32,6 +32,36 @@ on phones is an edit to a file in this repo, not a fight with a package's
 props. What we take from upstream is the _shape_ of the files, which is what
 the rest of this document describes.
 
+## The mobile inventory
+
+Every component below is in `Components/` in the catalogue, with its states and
+its `play` contracts. Reach for one before writing markup — the reason each
+exists is a mobile failure it prevents, and that reason is in its file header.
+
+| Component                                    | Instead of                                                                                                  |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `list/` — `MoleculeList`, `…Row`, `…Section` | A bordered `<div>` per settings group. A real `<ul>`, four slots, truncation that works                     |
+| `sheet/`                                     | `MoleculeDialog` when the surface is a sheet on _every_ screen. Reka `Drawer`, so the handle actually drags |
+| `tabs/`                                      | A strip of buttons. Reka supplies roving focus and the trigger/panel ARIA pairing                           |
+| `action-sheet/`                              | A dropdown menu anchored to a 24 px "⋯"                                                                     |
+| `chip-row/`                                  | A wrapping flex row of filters. Scrolls, snaps, and does not eat the back gesture                           |
+| `MoleculeEmptyState`                         | A centred `<p>`. Four states that differ in words, each owing a way out                                     |
+| `MoleculeAlert`                              | A coloured box. The ARIA role follows the tone, so `destructive` interrupts and the rest do not             |
+| `MoleculeSearchField`                        | `<input type="text">`. A search keyboard, and a clear button a thumb can hit                                |
+| `MoleculeSwipeableRow`                       | A row with hidden actions. These are always focusable, so a keyboard reaches them                           |
+| `OrganismBottomNav`                          | Inline tab markup in the shell                                                                              |
+| `OrganismPullToRefresh`                      | Nothing — it is an accelerator over a refresh you already offer                                             |
+| `OrganismOfflineBanner`                      | A toast. Offline is a condition, not an event                                                               |
+
+Two rules the tier-3 components are held to, in `play` functions rather than in
+review comments:
+
+- **A gesture is never the only path.** A swipe-revealed delete is unreachable
+  for keyboard and switch users, so the actions stay focusable and Tab opens
+  the row. Pull-to-refresh ships beside an ordinary Refresh control.
+- **Never draw an affordance you have not wired.** A drag handle that does not
+  drag is why `MoleculeSheet` exists beside `MoleculeDialog` at all.
+
 ## What each layer owns
 
 | Layer                | Owns                                                                  | Never                                           |
@@ -328,56 +358,51 @@ conventions that live outside this layer:
 6. **Run `pnpm check`.** The arch tier will tell you which of the rules above
    you missed, by name.
 
-### Every primitive gets one spec
+### Every primitive gets one executable story catalogue
 
-Primitives have no logic to unit-test, which for a long time was read here as
-"primitives get no test". That was the wrong conclusion from a true premise.
-What a primitive has instead of logic is a set of promises to the screens above
-it — a name, a role, a state, a reachable target, a paint that matches the
-state — and every one of those is invisible to the type system and to the arch
-tier, which can only see that the class string mentions `hover:`, never that
-the control still works.
+Primitives have no logic to unit-test. What they have instead is a set of
+rendered promises to the screens above them — a name, a role, a state, a
+reachable target, and paint that matches the state. Their colocated Storybook
+catalogue is both the review surface and the browser test: named stories hold
+the states, automatic axe grades each render, and `play` functions exercise the
+public interaction and geometry contracts.
 
-So: one `src/__tests__/components/<tier>/<name>.spec.ts` per shared component,
-in the browser tier, folding in the four oracles a primitive can be held to.
-`atomSwitch.spec.ts` is the worked example and runs all four:
+`AtomSwitch.stories.ts` is the worked example and runs the four oracles a
+primitive can be held to:
 
-| Oracle        | What it catches                                                        |
-| ------------- | ---------------------------------------------------------------------- |
-| axe           | a rule the screen sweeps never reach, because no sweep mounts this     |
-| ARIA snapshot | the tree an assistive technology is handed, plus the role-state filter |
-| real input    | pointer and keyboard both arrive, and a disabled control stays put     |
-| geometry      | the paint moved with the state, the only signal a sighted user gets    |
+| Oracle        | What it catches                                                         |
+| ------------- | ----------------------------------------------------------------------- |
+| axe           | a rule a screen sweep may never reach; Storybook runs it for each state |
+| ARIA snapshot | the tree an assistive technology is handed, plus the role-state filter  |
+| real input    | pointer and keyboard both arrive, and a disabled control stays put      |
+| geometry      | the paint moved with the state, the only signal a sighted user gets     |
 
-Four rules about the shape, each of them a thing that went wrong first:
+Four rules keep that shape honest:
 
-- **One file, not four.** Upstream reka splits these across
-  `<Name>.browser.test.ts`, `<Name>.aria.browser.test.ts`,
-  `<Name>.interactions.browser.test.ts` and a screenshot sheet, because there
-  the component _is_ the product. Here a primitive is a means to a screen, and
-  a reader asking what `AtomSwitch` promises should find the whole answer in
-  one place.
+- **One catalogue, not a story plus a parallel component spec.** The story is
+  the isolated render and its `play` function is the test. A failure is
+  debuggable in the same state a reviewer sees.
 - **No per-component screenshots.** The visual tier stays what it is: three
   whole-app frames. A variant grid per primitive is a baseline-maintenance job
-  the size of the component library, and the geometry assertion above already
-  catches the case that actually breaks — paint that stopped tracking state.
-- **The ARIA snapshot is inline.** Screen trees in `a11y/ariaStructure.spec.ts`
-  earn a `__snapshots__/` file; a primitive's tree is four lines, and a reader
-  should not open a second file to see it.
-- **Pair the snapshot with a role-state filter.** A snapshot says the tree
-  contains a checked switch. Only `getByRole('switch', { checked: true })
-  .elements()` having length 1 says the state is on that node and on _no
-  other_. A primitive that stamps `aria-checked` on its thumb as well as its
-  root passes the first and fails the second.
+  the size of the component library, and a resolved geometry assertion catches
+  paint that stopped tracking state.
+- **ARIA snapshots are the exception, not a second suite.** Storybook's Vitest
+  addon does not expose Vitest Browser's ARIA snapshot matcher, so the switch's
+  four-line semantic tree remains in `atomSwitch.spec.ts`. All its interaction,
+  axe and geometry contracts live in the story.
+- **Pair semantics with role-state filters.** A semantic tree says a checked
+  switch exists; a `play` assertion over `[role="switch"][aria-checked="true"]`
+  says the state is on exactly one node. A primitive that stamps
+  `aria-checked` on its thumb as well as its root must fail.
 
-The atoms and the parts of a compound primitive stay out of the a11y ledger
-(`__tests__/a11y/coverage.ts`, enforced by `a11yCoverage.test.ts`) — that tier
-sweeps screens, and per-control a11y belongs in the spec that renders the
-control. This section is what covers them instead.
+The atoms and the parts of a compound primitive stay out of the screen a11y
+ledger (`__tests__/a11y/coverage.ts`, enforced by `a11yCoverage.test.ts`).
+Storybook's axe run and semantic `play` assertions cover them instead.
 
-Behaviour a primitive _adds_ still gets its own assertion in that same file:
-`dialogContent.spec.ts` covers the scroll region surviving a keyboard-shrunk
-viewport. See [testing-strategy.md](testing-strategy.md).
+Behaviour a primitive _adds_ gets an assertion in that same story catalogue:
+`MoleculeDialog.stories.ts` covers the scroll region surviving a
+keyboard-shrunk viewport. The complete ownership rule and three exceptions are
+in [design-system.md](design-system.md).
 
 ### Two things the first pass turned up
 
@@ -388,8 +413,8 @@ rather than defects, and the specs are written to stay honest about that.
 `scrollable-region-focusable` fires on `TemplatePageLayout`'s content region
 when nothing inside it can take focus: a keyboard user has no way to scroll it.
 Every page the template carries today has controls, so nothing is shipping
-broken and `templatePageLayout.spec.ts` mounts a page-shaped harness that has
-them. A long read-only page — a changelog, a privacy note — would trip it. The
+broken and `TemplatePageLayout.stories.ts` renders a page-shaped harness that
+has them. A long read-only page — a changelog, a privacy note — would trip it. The
 fix when that page arrives is `tabindex="0"` on the region, which adds a tab
 stop to every page that uses the template; that is the trade to weigh then.
 
@@ -399,8 +424,8 @@ above it". With shadcn's canonical markup order — Cancel first, the action
 second — `flex-col-reverse` does the opposite: the first child lands at the
 bottom, so Cancel is the one under the thumb. Measured, not reasoned about; the
 app never exercises it, because the only footer it renders has one button in
-it. So `dialog.spec.ts` asserts the mechanism (below `sm:` the second control
-renders above the first; from `sm:` up they agree) and not the intent. Decide
+it. So `MoleculeDialog.stories.ts` asserts the mechanism (below `sm:` the
+second control renders above the first; from `sm:` up they agree) and not the intent. Decide
 which control belongs under the thumb, then make the comment and the test say
 that.
 

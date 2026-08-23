@@ -84,6 +84,23 @@ describe.each(THEMES)('accessibility, %s theme', (mode) => {
     await assertNoViolations(notes.install.dialog.element())
   })
 
+  /**
+   * Driven through the window's own `offline` event, which is the boundary
+   * `useOnline` listens on — the same rule every sweep here follows: reach the
+   * state the way the platform does, never by writing to a store.
+   */
+  it(`${SWEEPS.offlineBanner} has no violations`, async ({ notes, theme }) => {
+    await applyTheme(theme)
+    globalThis.dispatchEvent(new Event('offline'))
+    await notes.expectOffline()
+
+    try {
+      await assertNoViolations(notes.container)
+    } finally {
+      globalThis.dispatchEvent(new Event('online'))
+    }
+  })
+
   it(`${SWEEPS.updateBanner} has no violations`, async ({ notes, theme }) => {
     await applyTheme(theme)
     stubUpdateAvailable()

@@ -6,7 +6,9 @@ export default {
   },
   common: {
     buttons: {
+      cancel: 'Cancel',
       close: 'Close',
+      confirm: 'Confirm value',
       save: 'Save',
     },
     aria: {
@@ -16,6 +18,14 @@ export default {
   },
   quickAdd: {
     open: 'Add a note',
+  },
+  numericInput: {
+    backspace: 'Backspace',
+    currentValue: 'Current value',
+    decimal: 'Add decimal separator',
+    keypad: 'Numeric keypad',
+    presets: 'Suggested values',
+    replaceMode: 'Replace mode: the next digit replaces the current value',
   },
   notes: {
     title: 'Notes',
@@ -82,6 +92,9 @@ export default {
     },
   },
   pwa: {
+    offline: {
+      body: 'You are offline. Your notes are on this device and everything still works.',
+    },
     updateAvailable: 'A new version is available',
     reload: 'Reload',
     dismiss: 'Dismiss update notice',

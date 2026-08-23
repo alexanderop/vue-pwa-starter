@@ -8,7 +8,9 @@ const de: MessageSchema = {
   },
   common: {
     buttons: {
+      cancel: 'Abbrechen',
       close: 'Schließen',
+      confirm: 'Wert bestätigen',
       save: 'Speichern',
     },
     aria: {
@@ -18,6 +20,14 @@ const de: MessageSchema = {
   },
   quickAdd: {
     open: 'Notiz hinzufügen',
+  },
+  numericInput: {
+    backspace: 'Rücktaste',
+    currentValue: 'Aktueller Wert',
+    decimal: 'Dezimaltrennzeichen hinzufügen',
+    keypad: 'Ziffernblock',
+    presets: 'Vorgeschlagene Werte',
+    replaceMode: 'Ersetzmodus: Die nächste Ziffer ersetzt den aktuellen Wert',
   },
   notes: {
     title: 'Notizen',
@@ -81,6 +91,9 @@ const de: MessageSchema = {
     },
   },
   pwa: {
+    offline: {
+      body: 'Du bist offline. Deine Notizen liegen auf diesem Gerät und alles funktioniert weiter.',
+    },
     updateAvailable: 'Eine neue Version ist verfügbar',
     reload: 'Neu laden',
     dismiss: 'Update-Hinweis ausblenden',

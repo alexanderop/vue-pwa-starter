@@ -19,7 +19,7 @@ const { needRefresh, reload, dismiss } = usePwaUpdate()
   <div role="status" aria-live="polite" aria-atomic="true">
     <div
       v-if="needRefresh"
-      class="fixed inset-x-4 bottom-24 z-50 flex items-center gap-2 rounded-lg border bg-card p-3 shadow-lg sm:right-6 sm:left-auto sm:max-w-sm"
+      class="fixed inset-x-4 bottom-24 z-(--z-floating) flex items-center gap-2 rounded-lg border bg-card p-3 shadow-overlay sm:right-6 sm:left-auto sm:max-w-sm"
     >
       <p class="flex-1 text-sm">{{ t('pwa.updateAvailable') }}</p>
       <AtomButton size="sm" @click="reload">{{ t('pwa.reload') }}</AtomButton>

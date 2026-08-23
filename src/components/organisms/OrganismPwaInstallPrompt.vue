@@ -48,7 +48,7 @@ function openDialog(): void {
   <div role="status" aria-live="polite" aria-atomic="true">
     <div
       v-if="bannerVisible"
-      class="fixed inset-x-4 bottom-24 z-50 flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-lg sm:right-6 sm:left-auto sm:max-w-sm"
+      class="fixed inset-x-4 bottom-24 z-(--z-floating) flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-overlay sm:right-6 sm:left-auto sm:max-w-sm"
     >
       <div class="flex flex-col gap-1">
         <p class="text-sm font-medium">{{ t('pwa.install.banner.title') }}</p>

@@ -1,4 +1,9 @@
 {
+  "storybook": {
+    "repository": "storybookjs/storybook",
+    "branch": "pinned/10.5.7",
+    "description": "Storybook source of truth, pinned to 10.5.7. Read it for Vue 3/Vite configuration, CSF 3 rendering, Autodocs, themes, a11y, viewport behavior, and addon-vitest integration. The local checkout must move in lockstep with every Storybook package in the storybook catalog."
+  },
   "effect": {
     "repository": "Effect-TS/effect",
     "branch": "pinned/4.0.0-beta.105",

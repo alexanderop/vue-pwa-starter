@@ -82,6 +82,18 @@ export class NotesScreen extends AppScreen {
     await expect.element(this.emptyState).toBeVisible()
   })
 
+  /**
+   * The offline banner is on screen. `status` rather than `alert`, because
+   * losing the network is not a failure in a local-first app and the role is
+   * part of that claim.
+   */
+  readonly expectOffline = vi.defineHelper(async (): Promise<void> => {
+    // Found by test id, not by role: the app is full of live regions — the
+    // toast viewport is one, and so is every `MoleculeAlert` — so
+    // `getByRole('status')` matches four things and resolves to none of them.
+    await expect.element(page.getByTestId('offline-banner')).toBeVisible()
+  })
+
   /** A pinned note offers to be unpinned — that is the state, visibly. */
   readonly expectPinned = vi.defineHelper(async (title: string): Promise<void> => {
     await expect.element(page.getByRole('button', { name: `Unpin note ${title}` })).toBeVisible()

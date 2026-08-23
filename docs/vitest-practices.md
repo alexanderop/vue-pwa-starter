@@ -70,16 +70,17 @@ Three properties are worth knowing:
 
 ### Where a fixture lives
 
-| Scope                           | Home                                                       |
-| ------------------------------- | ---------------------------------------------------------- |
-| An app screen every tier drives | `src/__tests__/fixtures.ts` (`notes`, `settings`, `theme`) |
-| A harness for one spec          | That spec file, extending the shared `it`                  |
+| Scope                            | Home                                                       |
+| -------------------------------- | ---------------------------------------------------------- |
+| An app screen every tier drives  | `src/__tests__/fixtures.ts` (`notes`, `settings`, `theme`) |
+| A non-Storybook boundary harness | That spec file, extending the shared `it`                  |
 
-`components/appShell.spec.ts` (a stub router and a component in isolation) and
-`components/molecules/dialog/dialogContent.spec.ts` (a tall sheet under a simulated
-keyboard) are the worked examples of the second row. Neither harness means
-anything outside its file, so neither belongs in the shared module. Both still
-extend the shared `it`, so there is one import to remember.
+An isolated rendered component does not use this row: its harness belongs in
+the colocated Storybook story and its assertions belong in `play`. The second
+row is for the documented cases Storybook cannot prove faithfully, such as the
+real `beforeinstallprompt` boundary in `components/organisms/pwaInstall.spec.ts`.
+That harness means nothing outside its file, so it stays local while extending
+the shared `it`. See [design-system.md](design-system.md).
 
 ## Every assertion helper is wrapped in `vi.defineHelper`
 

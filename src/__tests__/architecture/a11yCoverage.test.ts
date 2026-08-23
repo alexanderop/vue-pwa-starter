@@ -13,10 +13,10 @@
  * filesystem analysis over the whole project, needs no browser, and would be
  * circular if the tier it grades had to be green for it to run.
  */
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { A11Y_COVERAGE, A11Y_SKIPPED, SWEEPS, type SweepId } from '../a11y/coverage'
+import { A11Y_BY_STORY, A11Y_COVERAGE, A11Y_SKIPPED, SWEEPS, type SweepId } from '../a11y/coverage'
 
 const SOURCE_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const A11Y_TIER = fileURLToPath(new URL('../a11y/', import.meta.url))
@@ -68,26 +68,31 @@ describe('a11y coverage', () => {
 
   it('every component names the sweep that covers it', () => {
     const undeclared = COMPONENTS.filter(
-      (file) => !(file in A11Y_COVERAGE) && !(file in A11Y_SKIPPED),
+      (file) => !(file in A11Y_COVERAGE) && !(file in A11Y_BY_STORY) && !(file in A11Y_SKIPPED),
     )
 
     expect(undeclared, undeclaredMessage(undeclared)).toEqual([])
   })
 
   it('no component is both covered and skipped', () => {
-    const both = COMPONENTS.filter((file) => file in A11Y_COVERAGE && file in A11Y_SKIPPED)
+    const both = COMPONENTS.filter(
+      (file) =>
+        [A11Y_COVERAGE, A11Y_BY_STORY, A11Y_SKIPPED].filter((map) => file in map).length > 1,
+    )
 
     expect(
       both,
-      `Listed in both A11Y_COVERAGE and A11Y_SKIPPED — pick one:\n${list(both)}`,
+      `Listed in more than one of A11Y_COVERAGE / A11Y_BY_STORY / A11Y_SKIPPED — pick one:\n${list(both)}`,
     ).toEqual([])
   })
 
   it('has no entries for components that no longer exist', () => {
     const present = new Set(COMPONENTS)
-    const obsolete = [...Object.keys(A11Y_COVERAGE), ...Object.keys(A11Y_SKIPPED)].filter(
-      (file) => !present.has(file),
-    )
+    const obsolete = [
+      ...Object.keys(A11Y_COVERAGE),
+      ...Object.keys(A11Y_BY_STORY),
+      ...Object.keys(A11Y_SKIPPED),
+    ].filter((file) => !present.has(file))
 
     expect(
       obsolete,
@@ -95,8 +100,22 @@ describe('a11y coverage', () => {
     ).toEqual([])
   })
 
+  it('every story-covered component names a story that exists', () => {
+    // Otherwise this map is a skip list wearing a different name: an entry
+    // pointing at a story nobody wrote is a component graded by nothing.
+    const missing = Object.entries(A11Y_BY_STORY).filter(([file, story]) => {
+      const directory = file.slice(0, file.lastIndexOf('/'))
+      return !existsSync(`${SOURCE_ROOT}${directory}/${story}`)
+    })
+
+    expect(
+      missing.map(([file, story]) => `${file} -> ${story}`),
+      'A11Y_BY_STORY names a story file that does not exist beside its component.',
+    ).toEqual([])
+  })
+
   it('every skip carries a reason', () => {
-    const unexplained = Object.entries(A11Y_SKIPPED)
+    const unexplained = Object.entries<string>(A11Y_SKIPPED)
       .filter(([, reason]) => reason.trim().length === 0)
       .map(([file]) => file)
 
@@ -138,6 +157,8 @@ function undeclaredMessage(undeclared: ReadonlyArray<string>): string {
     'In src/__tests__/a11y/coverage.ts, either:\n' +
     '  - add it to A11Y_COVERAGE naming the sweep that renders it (adding\n' +
     '    the sweep to a11y.spec.ts first if none does), or\n' +
+    '  - add it to A11Y_BY_STORY naming the .stories.ts whose axe run\n' +
+    '    covers it, if it has no call site for a sweep to reach, or\n' +
     '  - add it to A11Y_SKIPPED with the reason a sweep would not be\n' +
     '    checking the shipped UI.'
   )

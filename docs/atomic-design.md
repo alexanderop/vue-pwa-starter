@@ -21,6 +21,7 @@ src/components/
               AtomLabel.vue   AtomSelect.vue  AtomSkeleton.vue
               AtomSpinner.vue AtomSwitch.vue  AtomTextarea.vue
   molecules/  dialog/MoleculeDialog.vue + 8 parts
+              numeric-input/MoleculeNumericInput.vue + its drawer parts
               MoleculePageHeader.vue  MoleculePwaUpdatePrompt.vue
               MoleculeToastViewport.vue
   organisms/  OrganismAppShell.vue  OrganismPwaInstallPrompt.vue
@@ -40,12 +41,12 @@ component only makes sense inside one feature, its home is the feature, and
 
 The question is not "how big is it" but **what does it stop working without**.
 
-| Tier          | Works on its own given                             | Examples                                                                            |
-| ------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **atoms**     | props alone                                        | `AtomButton`, `AtomInput`, `AtomSelect`, `AtomBadge`, `AtomSpinner`                 |
-| **molecules** | props, plus a couple of atoms it composes          | `dialog/`, `MoleculePageHeader`, `MoleculePwaUpdatePrompt`, `MoleculeToastViewport` |
-| **organisms** | a place in the app — routes, a store, a composable | `OrganismAppShell`, `OrganismPwaInstallPrompt`, `OrganismPwaInstallDialog`          |
-| **templates** | a page's slots filled in                           | `TemplatePageLayout`                                                                |
+| Tier          | Works on its own given                             | Examples                                                                                                   |
+| ------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **atoms**     | props alone                                        | `AtomButton`, `AtomInput`, `AtomCard`, `AtomCheckbox`, `AtomSlider`, `AtomRadioGroup/`                     |
+| **molecules** | props, plus a couple of atoms it composes          | `list/`, `sheet/`, `tabs/`, `action-sheet/`, `chip-row/`, `dialog/`, `MoleculeAlert`, `MoleculeEmptyState` |
+| **organisms** | a place in the app — routes, a store, a composable | `OrganismAppShell`, `OrganismBottomNav`, `OrganismOfflineBanner`, `OrganismPullToRefresh`                  |
+| **templates** | a page's slots filled in                           | `TemplatePageLayout`                                                                                       |
 
 `MoleculeToastViewport` reads a store and is still a molecule, because what it
 renders is one small thing (a stack of strings) rather than a region of the
@@ -182,8 +183,10 @@ has only ever seen passing input is not a rule.
    way the filename opens with the tier prefix.
 3. **Check the arrow.** If the tier you picked needs something above it, you
    picked the wrong tier — or the thing it needs belongs lower.
-4. **Wire the test home.** Specs mirror the source tree, so
-   `molecules/MoleculePageHeader.vue` is specced at
-   `src/__tests__/components/molecules/`. A composite also needs a row in
+4. **Wire the test home.** Add the colocated `.stories.ts` catalogue; an
+   isolated rendered contract belongs in a named story and `play` function,
+   not in a parallel `src/__tests__/components/` spec. Compound primitives get
+   one provider-tree story. A composite also needs a row in
    `src/__tests__/a11y/coverage.ts` naming the screen sweep that covers it.
+   Full boundary and exception table: [design-system.md](design-system.md).
 5. **Run `pnpm check`.** The arch tier names the rule you missed.

@@ -1,0 +1,89 @@
+import { Meta, Title, Subtitle } from '@storybook/addon-docs/blocks'
+
+<Meta title="Guidelines/Small screens" />
+
+<div className="mx-auto max-w-3xl select-text space-y-10 py-8">
+  <header className="space-y-3">
+    <Title>Small screens</Title>
+    <Subtitle>Truncation, long German copy, two-line rows, and the sizes that stay legible.</Subtitle>
+    <div className="text-footnote text-muted-foreground">
+      The catalog opens at 390 px because that is where the product lives. The narrow viewport option
+      is 320 px, and a layout that only works at 390 is a layout with an untested edge.
+    </div>
+  </header>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">Every string is longer in German</h2>
+  <div className="text-callout text-muted-foreground">
+    Switch the locale in the toolbar before calling a layout done. German compounds are routinely
+    40% longer than their English source, and the failures are structural rather than cosmetic: a
+    button that was one line becomes two and pushes a footer off-screen; a tab label that fitted now
+    wraps and changes the tab bar's height.
+  </div>
+  <div className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
+    <div className="rounded-md border p-3">
+      <p className="text-caption text-muted-foreground">en</p>
+      <p className="text-label">Export backup</p>
+    </div>
+    <div className="rounded-md border p-3">
+      <p className="text-caption text-muted-foreground">de</p>
+      <p className="text-label">Sicherungskopie exportieren</p>
+    </div>
+  </div>
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">Truncate the line, never the meaning</h2>
+  <div className="text-callout text-muted-foreground">
+    A row title truncates with an ellipsis; the thing that identifies the row does not. If the only
+    way to tell two rows apart is inside the truncated part, the row needs a second line rather than
+    a wider screen.
+  </div>
+  <div className="space-y-2 rounded-lg border p-4">
+    <div className="flex min-h-touch-target items-center gap-3 rounded-md border px-3">
+      <span className="min-w-0 flex-1 truncate text-label">
+        Grocery list for the weekend trip to the coast and back again
+      </span>
+      <span className="shrink-0 text-caption text-muted-foreground">2 min</span>
+    </div>
+    <div className="flex min-h-touch-target items-center gap-3 rounded-md border px-3">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-label">Grocery list for the weekend trip</span>
+        <span className="block truncate text-footnote text-muted-foreground">
+          Two lines when the first cannot carry the identity
+        </span>
+      </span>
+      <span className="shrink-0 text-caption text-muted-foreground">2 min</span>
+    </div>
+  </div>
+  <div className="text-footnote text-muted-foreground">
+    <code>truncate</code> needs a <code>min-w-0</code> flex parent. Without it the flex item refuses
+    to shrink below its content and the row overflows instead of ellipsing — the single most common
+    way this goes wrong.
+  </div>
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">Minimum legible sizes</h2>
+  <div className="text-callout text-muted-foreground">
+    <code>text-caption</code> at 12 px is the floor, and it is for labels a user reads once — a tab
+    name, a timestamp, a badge. Anything a user reads as a sentence is <code>text-callout</code> or{' '}
+    <code>text-body</code>. There is no rung below caption, and adding one is a design change.
+  </div>
+  <div className="space-y-1 rounded-lg border p-4">
+    <p className="text-body">Body — read as a sentence</p>
+    <p className="text-callout">Callout — secondary prose inside a card</p>
+    <p className="text-footnote text-muted-foreground">Footnote — supporting text under a field</p>
+    <p className="text-caption text-muted-foreground">Caption — read once, never a sentence</p>
+  </div>
+</section>
+
+  <section className="space-y-3">
+    <h2 className="text-section-title font-semibold">The chrome is not free space</h2>
+    <div className="text-callout text-muted-foreground">
+      On a 390 × 844 phone the shell already spends <code>--spacing-header-height</code> at the top,{' '}
+      <code>--spacing-nav-height</code> at the bottom, and a safe-area inset at each end. Anything
+      pinned above the tab bar has to address those tokens rather than guess, which is why they exist.
+    </div>
+  </section>
+</div>

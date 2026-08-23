@@ -5,12 +5,12 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AtomButton from '@/components/atoms/AtomButton.vue'
 import {
-  MoleculeDialog,
-  MoleculeDialogContent,
-  MoleculeDialogDescription,
-  MoleculeDialogHeader,
-  MoleculeDialogTitle,
-} from '@/components/molecules/dialog'
+  MoleculeSheet,
+  MoleculeSheetContent,
+  MoleculeSheetDescription,
+  MoleculeSheetHeader,
+  MoleculeSheetTitle,
+} from '@/components/molecules/sheet'
 import AtomInput from '@/components/atoms/AtomInput.vue'
 import AtomLabel from '@/components/atoms/AtomLabel.vue'
 import AtomTextarea from '@/components/atoms/AtomTextarea.vue'
@@ -99,12 +99,17 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <MoleculeDialog v-model:open="open">
-    <MoleculeDialogContent>
-      <MoleculeDialogHeader>
-        <MoleculeDialogTitle>{{ t('notes.form.heading') }}</MoleculeDialogTitle>
-        <MoleculeDialogDescription>{{ t('notes.form.description') }}</MoleculeDialogDescription>
-      </MoleculeDialogHeader>
+  <!-- A sheet, not a dialog: this is a sheet on every screen, it draws a drag
+       handle, and a handle that does not drag is an affordance nobody wired.
+       Guidelines/Sheet or dialog has the rule. -->
+  <MoleculeSheet v-model:open="open">
+    <MoleculeSheetContent>
+      <template #header>
+        <MoleculeSheetHeader>
+          <MoleculeSheetTitle>{{ t('notes.form.heading') }}</MoleculeSheetTitle>
+          <MoleculeSheetDescription>{{ t('notes.form.description') }}</MoleculeSheetDescription>
+        </MoleculeSheetHeader>
+      </template>
       <form class="flex flex-col gap-4" @submit.prevent="save">
         <div class="flex flex-col gap-2">
           <AtomLabel for="note-title">{{ t('notes.form.titleLabel') }}</AtomLabel>
@@ -124,6 +129,6 @@ async function save(): Promise<void> {
         </div>
         <AtomButton type="submit" :disabled="!canSave">{{ t('common.buttons.save') }}</AtomButton>
       </form>
-    </MoleculeDialogContent>
-  </MoleculeDialog>
+    </MoleculeSheetContent>
+  </MoleculeSheet>
 </template>

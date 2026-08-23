@@ -1,0 +1,85 @@
+import { Meta, Title, Subtitle, Story } from '@storybook/addon-docs/blocks'
+import * as ButtonStories from '../../components/atoms/AtomButton.stories'
+
+<Meta title="Guidelines/Touch" />
+
+<div className="mx-auto max-w-3xl select-text space-y-10 py-8">
+  <header className="space-y-3">
+    <Title>Touch</Title>
+    <Subtitle>Five conventions, demonstrated. The rules themselves live in one file.</Subtitle>
+    <div className="text-footnote text-muted-foreground">
+      This page does not restate <code>docs/touch-conventions.md</code>; it renders what the
+      conventions look like against real components. When a rule and its demonstration disagree, the
+      markdown wins — a convention that exists in two copies is a convention that will drift.
+    </div>
+  </header>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">1. Press feedback before completion feedback</h2>
+  <div className="text-callout text-muted-foreground">
+    Tailwind gates every <code>hover:</code> behind <code>@media (hover: hover)</code>, so on a
+    phone a hover-only button acknowledges nothing. The press is a scale, and it animates on{' '}
+    <code>duration-(--duration-instant)</code> — the shortest rung on the motion ladder, because a
+    press has to feel like contact rather than like an animation.
+  </div>
+  <Story of={ButtonStories.Primary} />
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">
+    2. Size touch-first, collapse for a fine pointer
+  </h2>
+  <div className="text-callout text-muted-foreground">
+    44 px is the default and shrinking is what a mouse opts into, not the other way round. Every
+    control below is <code>h-touch-target</code> with a <code>pointer-fine:</code> collapse, so a
+    desktop browser shows the smaller box and a phone shows the floor.
+  </div>
+  <Story of={ButtonStories.SizesAndIcon} />
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">
+    3. Suppress document behaviour, then grant it back
+  </h2>
+  <div className="text-callout text-muted-foreground">
+    App chrome is not a document: rows and tab labels are controls, and letting them be selected
+    intercepts the long-press a native app spends on a context menu. The global suppression ships in
+    the same commit as its exemption for fields — without it, iOS refuses caret placement inside an
+    input, which presents as a broken keyboard rather than as a CSS bug.
+  </div>
+  <div className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
+    <div className="rounded-md bg-muted p-3 text-caption">Chrome — try to select this label</div>
+    <p className="rounded-md bg-muted p-3 text-caption select-text">Prose — this one selects</p>
+  </div>
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">4. Clamp every environment value</h2>
+  <div className="text-callout text-muted-foreground">
+    Every <code>env(safe-area-inset-*)</code> is <code>0</code> on flat-bottomed hardware, so a bare{' '}
+    <code>env()</code> ships a layout nobody tested. The utilities clamp against{' '}
+    <code>--safe-top-min</code> and <code>--safe-bottom-min</code>, which is also what makes the{' '}
+    <strong>Phone frame</strong> toolbar control work: <code>env()</code> cannot be faked, but the
+    floor under it can. Turn the frame on and watch the padding appear.
+  </div>
+</section>
+
+<section className="space-y-3">
+  <h2 className="text-section-title font-semibold">
+    5. Never draw an affordance you have not wired
+  </h2>
+  <div className="text-callout text-muted-foreground">
+    A drag handle that does not drag, or a swipe row with no keyboard equivalent, is worse than no
+    affordance at all: it teaches a gesture that fails. Every gesture component in this catalog
+    carries the <code>touch</code> tag, asserts <code>(pointer: coarse)</code> before asserting its
+    branch, and proves a non-gesture path to the same action in its <code>play</code> function.
+  </div>
+</section>
+
+  <footer className="rounded-lg border border-dashed p-4 text-footnote text-muted-foreground">
+    What no tier can tell you: real safe areas, real on-screen keyboards, and real momentum scrolling
+    are proved on a device. The frame and keyboard toolbar controls are design aids for seeing the
+    layout, never evidence that it is right. <code>docs/design-system.md</code> holds the device
+    checklist.
+  </footer>
+</div>

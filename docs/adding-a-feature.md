@@ -45,14 +45,15 @@ Atoms via `@effect/atom-vue`, with `src/features/notes/atoms.ts` as the template
 
 For a feature the size of notes, the full set is roughly:
 
-| Tier    | What to cover                                                                                                 |
-| ------- | ------------------------------------------------------------------------------------------------------------- |
-| unit    | domain functions, converters                                                                                  |
-| default | the main user flow through the real UI (`notesFlow.spec.ts` pattern: interact, assert UI, assert persistence) |
-| a11y    | one axe sweep of the new screen; one of any new dialog                                                        |
-| visual  | a screenshot if the screen is part of the shell's core look (`pnpm test:visual:update`)                       |
-| arch    | nothing to write; the generic rules pick up new features automatically                                        |
-| e2e     | only if the feature carries a load-bearing journey, like persistence across reload                            |
+| Tier      | What to cover                                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------------------- |
+| unit      | domain functions, converters                                                                                  |
+| storybook | component states and isolated interaction, semantics, axe, geometry and touch contracts                       |
+| default   | the main user flow through the real UI (`notesFlow.spec.ts` pattern: interact, assert UI, assert persistence) |
+| a11y      | one axe sweep of the new screen; one of any new dialog                                                        |
+| visual    | a screenshot if the screen is part of the shell's core look (`pnpm test:visual:update`)                       |
+| arch      | nothing to write; the generic rules pick up new features automatically                                        |
+| e2e       | only if the feature carries a load-bearing journey, like persistence across reload                            |
 
 Anything that drives the new screen goes through a page object first: a class in `src/__tests__/pages/` for the browser tiers, and one in `test/e2e/pages/` if the feature reaches e2e. `NotesScreen` and `NotesPage` are the templates; the rules are in [testing-strategy.md](testing-strategy.md).
 

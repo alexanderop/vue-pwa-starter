@@ -4,12 +4,14 @@ node_modules
 # Build output
 dist
 dev-dist
+storybook-static
 stats.html
 
 # Caches
 .eslintcache
 .vitest
 .vitest-attachments
+.vitest/storybook
 node_modules/.tmp
 
 # Test output

@@ -29,7 +29,7 @@ const ageLabel = computed(() => {
 </script>
 
 <template>
-  <article class="rounded-lg border bg-card p-4 shadow-xs">
+  <article class="rounded-lg border bg-card p-4 shadow-raised">
     <div class="flex items-start gap-1">
       <div class="min-w-0 flex-1">
         <!-- A badge rather than a coloured line of text: pinned is a state of

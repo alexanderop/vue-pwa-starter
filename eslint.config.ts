@@ -252,6 +252,7 @@ export const CORE = [
   'src/features/*/domain.ts',
   'src/db/converters.ts',
   'src/lib/installPlatform.ts',
+  'src/lib/numericInput.ts',
   'src/lib/utils.ts',
 ]
 
@@ -490,7 +491,8 @@ const boundaries = [
   // Everything else the app ships — views, router, i18n, the shell. These
   // compose features on purpose; the db surface still applies. Tests are
   // exempt: the migration spec has to talk to the schema directly, and a
-  // component spec may mount a reka-ui part as a bare harness.
+  // component story or boundary-exception spec may mount a reka-ui part as a
+  // bare harness.
   boundary(
     'app',
     [`src/${SOURCES}`],
@@ -515,6 +517,7 @@ export default defineConfigWithVueTs(
     ignores: [
       '**/dist/**',
       '**/dev-dist/**',
+      '**/storybook-static/**',
       '**/coverage/**',
       '**/.features-gen/**',
       '**/.vitest/**',

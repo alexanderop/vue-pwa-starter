@@ -2,8 +2,8 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "treatConfigHintsAsErrors": true,
   "treatTagHintsAsErrors": true,
-  "entry": ["index.html"],
-  "project": ["src/**/*.ts", "src/**/*.vue", "src/**/*.css"],
+  "entry": ["index.html", ".storybook/install-prompt.ts", "vite.storybook.config.ts"],
+  "project": [".storybook/**/*.ts", "src/**/*.css", "src/**/*.mdx", "src/**/*.ts", "src/**/*.vue"],
   "vitest": {
     "entry": ["src/__tests__/**/*.spec.ts", "src/__tests__/**/*.test.ts"]
   }

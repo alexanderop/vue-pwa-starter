@@ -1,0 +1,70 @@
+import { Meta, Title, Subtitle } from '@storybook/addon-docs/blocks'
+
+<Meta title="Start/Welcome" />
+
+<div className="mx-auto max-w-4xl select-text space-y-10 py-8">
+  <header className="space-y-4">
+    <span className="inline-flex rounded-full bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground">
+      Local-first by default
+    </span>
+    <Title>Vue PWA Design System</Title>
+    <Subtitle>The browsable contract for a mobile-first Vue 3 starter.</Subtitle>
+    {/* A plain paragraph, not <Description>: that block reads its text from an
+        attached CSF file, and an unattached page like this one has none — which
+        made the catalog's front door render an error instead of a welcome. */}
+    <div className="text-callout text-muted-foreground">
+      Components remain the source of truth. Storybook renders their supported states, interactions,
+      responsive behavior, themes, locales, and automated accessibility results. Application data stays
+      on-device in IndexedDB; the catalog does not add accounts or a backend.
+    </div>
+  </header>
+
+<section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  {[
+    ['Atoms', 'Props alone: buttons, fields, badges, and status indicators.'],
+    ['Molecules', 'Small compositions and compound primitives such as dialogs.'],
+    ['Organisms', 'Regions that depend on routes, stores, or browser capabilities.'],
+    ['Templates', 'Page structure whose slots are filled by a feature or screen.'],
+  ].map(([title, body]) => (
+    <article
+      key={title}
+      className="rounded-xl border bg-card p-5 text-card-foreground shadow-raised"
+    >
+      <h2 className="text-section-title font-semibold">{title}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+    </article>
+  ))}
+</section>
+
+<section className="grid gap-6 md:grid-cols-2">
+  <div className="rounded-xl border p-5">
+    <h2 className="text-section-title font-semibold">Run it</h2>
+    <pre className="mt-3 overflow-x-auto rounded-lg bg-muted p-4 text-sm select-text">
+      <code>{`pnpm dev
+pnpm storybook
+pnpm test:storybook
+pnpm build:storybook`}</code>
+    </pre>
+  </div>
+  <div className="rounded-xl border p-5">
+    <h2 className="text-section-title font-semibold">Add a component</h2>
+    <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+      <li>Choose the lowest atomic tier whose dependencies fit.</li>
+      <li>Implement the public props, emits, slots, and touch behavior.</li>
+      <li>Colocate a typed CSF 3 story showing every intentional state.</li>
+      <li>
+        Run Storybook tests, the touched browser tier, and <code>pnpm check</code>.
+      </li>
+    </ol>
+  </div>
+</section>
+
+  <section className="rounded-xl border bg-muted/40 p-5">
+    <h2 className="text-section-title font-semibold">Which test owns the claim?</h2>
+    <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+      <div><dt className="font-semibold">Story</dt><dd className="text-sm text-muted-foreground">Rendered states, local interactions, responsive UI, and component axe.</dd></div>
+      <div><dt className="font-semibold">Browser spec</dt><dd className="text-sm text-muted-foreground">Feature flows, persistence assertions, platform boundaries, and focus across components.</dd></div>
+      <div><dt className="font-semibold">Production E2E</dt><dd className="text-sm text-muted-foreground">The shipped bundle, service worker, real IndexedDB, and offline reload.</dd></div>
+    </dl>
+  </section>
+</div>

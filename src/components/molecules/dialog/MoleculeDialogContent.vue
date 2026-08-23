@@ -4,8 +4,10 @@ import type { HTMLAttributes } from 'vue'
 import { X } from '@lucide/vue'
 import { reactiveOmit } from '@vueuse/core'
 import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from 'reka-ui'
+import { useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTouchDevice } from '@/composables/useTouchDevice'
+import { useCoarsePointerAutoFocus } from '@/composables/useCoarsePointerAutoFocus'
+import { useScrollRegionTabIndex } from '@/composables/useScrollRegionTabIndex'
 import { cn } from '@/lib/utils'
 import MoleculeDialogOverlay from './MoleculeDialogOverlay.vue'
 
@@ -45,22 +47,12 @@ defineSlots<{
 const delegatedProps = reactiveOmit(props, 'class', 'showCloseButton')
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
-const isTouchDevice = useTouchDevice()
+const handleOpenAutoFocus = useCoarsePointerAutoFocus((event) => emits('openAutoFocus', event))
 
-// On touch devices reka-ui's autofocus would focus the first input and pop
-// the on-screen keyboard while the sheet is still animating in, racing the
-// viewport measurement. Keep focus on the sheet itself; the keyboard opens
-// when the user taps a field.
-//
-// This handler is bound after `v-bind="forwarded"`, so it replaces the
-// forwarded one — re-emitting is what keeps a consumer's own
-// `@open-auto-focus` listener working.
-function handleOpenAutoFocus(event: Event): void {
-  emits('openAutoFocus', event)
-  if (event.defaultPrevented || !isTouchDevice.value) return
-  event.preventDefault()
-  if (event.target instanceof HTMLElement) event.target.focus({ preventScroll: true })
-}
+const bodyElement = useTemplateRef<HTMLElement>('body')
+
+/** Focusable only when nothing inside it is — see the composable for why. */
+const bodyTabIndex = useScrollRegionTabIndex(bodyElement)
 </script>
 
 <template>
@@ -72,45 +64,45 @@ function handleOpenAutoFocus(event: Event): void {
          phone without a home indicator. The floor goes into the utility's
          `--safe-bottom-min` instead, so a single declaration wins by
          construction. -->
+    <!-- Two elevations, because this is two components. Below `sm` it is a
+         bottom sheet and casts `shadow-sheet` *upward* onto the content it
+         occludes; at `sm` it becomes a centred dialog floating over the whole
+         page, which is what `shadow-overlay` is for. -->
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
-          'bg-background fixed bottom-[var(--keyboard-inset,0px)] left-0 right-0 z-50 flex w-full flex-col gap-4 overflow-hidden rounded-t-2xl border pt-2 px-4 shadow-lg safe-area-bottom [--safe-bottom-min:1.5rem]',
+          'bg-background fixed bottom-[var(--keyboard-inset,0px)] left-0 right-0 z-(--z-sheet) flex w-full flex-col gap-4 overflow-hidden rounded-t-2xl border pt-2 px-4 shadow-sheet sm:shadow-overlay safe-area-bottom [--safe-bottom-min:1.5rem]',
           'max-h-[calc(100dvh-var(--keyboard-inset,0px))]',
           'data-[state=open]:animate-slide-up-mobile data-[state=closed]:animate-slide-down-mobile',
-          'sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:duration-200',
+          'sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:duration-(--duration-base)',
           'sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:max-w-lg sm:max-h-[calc(100vh-4rem)] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-6',
           props.class,
         )
       "
       @open-auto-focus="handleOpenAutoFocus"
     >
-      <!-- Drag handle (mobile only) -->
-      <div class="flex shrink-0 justify-center pb-2 sm:hidden">
-        <div class="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
-      </div>
+      <!-- No drag handle. There used to be one here — a grip bar that could
+           not be dragged, with a comment saying reka's Drawer would wire it
+           for real "and migrating to it is an API change rather than a CSS
+           one". That migration has landed as `molecules/sheet/`, so a surface
+           that wants a handle uses `MoleculeSheet` and gets a real one. Drawing
+           an affordance nobody wired is convention 5 in
+           docs/touch-conventions.md, and this was the last one. -->
 
-      <!-- Scroll region: the sheet is capped at the keyboard-adjusted viewport
-           height, so on a landscape phone with the keyboard open there may be
-           only ~150px left. Everything but the drag handle scrolls, which is
-           what keeps the submit button reachable. `min-h-0` is required — flex
-           items default to min-height:auto and would refuse to shrink. -->
-      <div
-        data-slot="dialog-body"
-        class="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1"
-      >
+      <!-- Scroll region, capped at the keyboard-adjusted viewport height: on a
+           landscape phone with the keyboard open there may be only ~150px
+           left, and everything except the footer scrolls, which is what keeps
+           the submit button reachable. `scroll-region` carries the `min-h-0`
+           that makes it shrink at all. -->
+      <div ref="body" data-slot="dialog-body" :tabindex="bodyTabIndex" class="scroll-region">
         <slot />
       </div>
 
-      <!-- Close button (desktop only) — on mobile the sheet is dismissed by
-           tapping the overlay, and the corner target competes with the drag
-           handle. The handle above is a visual grip, not a gesture: reka-ui
-           ships a Drawer (DrawerHandle, DrawerSwipeArea, velocity dismissal)
-           that would wire it for real, and migrating to it is an API change
-           rather than a CSS one. Until then this comment does not promise a
-           swipe the sheet does not honor. -->
+      <!-- Close button (desktop only) — below `sm` the sheet is dismissed by
+           tapping the overlay, and a corner target that small is not a thumb
+           target anyway. -->
       <DialogClose
         v-if="showCloseButton"
         data-slot="dialog-close"

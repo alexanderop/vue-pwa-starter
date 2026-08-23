@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { NotebookPen } from '@lucide/vue'
 import { AsyncResult, useAtomSet, useAtomValue } from '@effect/atom-vue'
 import { Effect } from 'effect'
 import { computed } from 'vue'
@@ -6,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { dbMutation, deleteNote, toggleNotePinned } from '@/db'
 import { useReportFailure } from '@/composables/useReportFailure'
 import AtomSkeleton from '@/components/atoms/AtomSkeleton.vue'
+import MoleculeEmptyState from '@/components/molecules/MoleculeEmptyState.vue'
 import NoteCard from '@/features/notes/components/NoteCard.vue'
 import { notesAtom } from '@/features/notes/atoms'
 import { useToastStore } from '@/stores/toast'
@@ -77,17 +79,24 @@ async function handleDelete(id: string): Promise<void> {
   <div class="mx-auto flex w-full max-w-lg flex-col gap-section p-4">
     <h1 class="text-page-title font-bold tracking-tight">{{ t('notes.title') }}</h1>
 
-    <div v-if="loadFailed" role="alert" class="rounded-lg border border-dashed p-8 text-center">
-      <p class="text-sm text-muted-foreground">{{ t('notes.loadError') }}</p>
-    </div>
-
-    <div
-      v-else-if="isLoaded && notes.length === 0"
-      class="rounded-lg border border-dashed p-8 text-center"
+    <MoleculeEmptyState
+      v-if="loadFailed"
+      role="alert"
+      title-as="h2"
+      class="rounded-lg border border-dashed"
     >
-      <h2 class="text-section-title font-semibold">{{ t('notes.empty.title') }}</h2>
-      <p class="mt-2 text-sm text-muted-foreground">{{ t('notes.empty.body') }}</p>
-    </div>
+      {{ t('notes.loadError') }}
+    </MoleculeEmptyState>
+
+    <MoleculeEmptyState
+      v-else-if="isLoaded && notes.length === 0"
+      title-as="h2"
+      class="rounded-lg border border-dashed"
+    >
+      <template #icon><NotebookPen class="size-6" aria-hidden="true" /></template>
+      {{ t('notes.empty.title') }}
+      <template #description>{{ t('notes.empty.body') }}</template>
+    </MoleculeEmptyState>
 
     <!-- The first read from IndexedDB, before any note exists to show. It is
          rarely slow and it is never instant, and the alternative is a blank

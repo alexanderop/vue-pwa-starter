@@ -1,10 +1,12 @@
 import process from 'node:process'
 import { fileURLToPath, URL } from 'node:url'
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { playwright } from '@vitest/browser-playwright'
 import { VitePWA } from 'vite-plugin-pwa'
 import { configDefaults, defineConfig } from 'vitest/config'
+import { createStorybookViteConfig } from './vite.storybook.config.js'
 
 // Shared resolve config for path aliases
 const resolve = {
@@ -71,6 +73,11 @@ function browserConfig(name: string) {
 // Shared plugins for all browser projects
 const plugins = [vue(), tailwindcss(), VitePWA({ devOptions: { enabled: true } })]
 
+// The manager starts Vitest with STORYBOOK_CONFIG_DIR and the addon assigns
+// every project using this config directory the same generated identity. The
+// embedded panel therefore receives one project; CLI and CI keep the matrix.
+const isStorybookTestPanel = process.env.STORYBOOK_CONFIG_DIR !== undefined
+
 // Shared base configuration: component/feature/a11y/visual tests all run in
 // Playwright browser mode for real-browser behavior (real CSS, real events,
 // real IndexedDB APIs — no jsdom approximations).
@@ -105,6 +112,47 @@ const sharedTestConfig = {
   // Required for ArchUnitTS custom matchers
   globals: true,
   setupFiles: ['./src/__tests__/setup.ts'],
+}
+
+function storybookProject(theme: 'light' | 'dark', touch = false) {
+  const storybookViteConfig = createStorybookViteConfig()
+  const suffix = touch ? 'touch' : theme
+  const initialGlobals = touch
+    ? { locale: 'en', theme, viewport: { value: 'mobile', isRotated: false } }
+    : { locale: 'en', theme }
+
+  return {
+    plugins: [
+      ...(storybookViteConfig.plugins ?? []),
+      storybookTest({
+        configDir: fileURLToPath(new URL('./.storybook', import.meta.url)),
+        storybookScript: 'pnpm storybook --no-open',
+        tags: touch ? { include: ['touch'] } : { include: ['test'], exclude: ['touch'] },
+        initialGlobals,
+      }),
+    ],
+    resolve: storybookViteConfig.resolve,
+    optimizeDeps: storybookViteConfig.optimizeDeps,
+    test: {
+      ...sharedTestConfig,
+      name: `storybook-${suffix}`,
+      fileParallelism: false,
+      setupFiles: './.storybook/vitest.setup.ts',
+      browser: touch
+        ? {
+            ...browserConfig('storybook-touch-browser'),
+            provider: playwright({
+              actionTimeout: ACTION_TIMEOUT,
+              contextOptions: {
+                hasTouch: true,
+                isMobile: true,
+                viewport: { width: 390, height: 844 },
+              },
+            }),
+          }
+        : browserConfig(`storybook-${theme}-browser`),
+    },
+  }
 }
 
 const coverageConfig = {
@@ -164,6 +212,12 @@ export default defineConfig({
           browser: browserConfig('default-browser'),
         },
       },
+
+      // Rendered component states, interactions, and component-level axe.
+      // The dedicated Vite root above intentionally excludes the PWA plugin.
+      ...(isStorybookTestPanel
+        ? [storybookProject('light')]
+        : [storybookProject('light'), storybookProject('dark'), storybookProject('light', true)]),
 
       // Touch: the same specs' browser, emulating a phone. This is the only
       // tier where `pointer: coarse` and `hover: none` match — every other

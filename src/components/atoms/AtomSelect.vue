@@ -45,7 +45,7 @@ defineSlots<{
       data-slot="select"
       :class="
         cn(
-          'flex h-touch-target w-full appearance-none rounded-md border border-input bg-transparent px-3 py-2 pr-10 text-base shadow-xs transition-colors touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed pointer-fine:h-10 pointer-fine:text-sm',
+          'flex h-touch-target w-full appearance-none rounded-md border border-input bg-transparent px-3 py-2 pr-10 text-base shadow-raised transition-colors touch-manipulation focus-ring disabled:cursor-not-allowed pointer-fine:h-10 pointer-fine:text-sm',
           props.class,
         )
       "
@@ -55,7 +55,7 @@ defineSlots<{
     <!-- `pointer-events-none` is load-bearing rather than tidy: the chevron
          sits over the right edge of the control, which is exactly where a
          thumb reaches for it, and without this the tap lands on an SVG and
-         the picker never opens. Covered in atomSelect.spec.ts. -->
+         the picker never opens. Covered in AtomSelect.stories.ts. -->
     <ChevronDown
       data-slot="select-icon"
       aria-hidden="true"
