@@ -4,7 +4,6 @@
   "treatTagHintsAsErrors": true,
   "entry": ["index.html"],
   "project": ["src/**/*.ts", "src/**/*.vue", "src/**/*.css"],
-  "ignore": ["src/components/*/*/**"],
   "vitest": {
     "entry": ["src/__tests__/**/*.spec.ts", "src/__tests__/**/*.test.ts"]
   }

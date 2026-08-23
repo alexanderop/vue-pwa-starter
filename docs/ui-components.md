@@ -328,10 +328,81 @@ conventions that live outside this layer:
 6. **Run `pnpm check`.** The arch tier will tell you which of the rules above
    you missed, by name.
 
-Primitives are not unit-tested on their own: they have no logic to test. What
-gets a test is behaviour the primitive _adds_. `dialogContent.spec.ts` covers
-the scroll region surviving a keyboard-shrunk viewport, in the browser tier.
-See [testing-strategy.md](testing-strategy.md).
+### Every primitive gets one spec
+
+Primitives have no logic to unit-test, which for a long time was read here as
+"primitives get no test". That was the wrong conclusion from a true premise.
+What a primitive has instead of logic is a set of promises to the screens above
+it — a name, a role, a state, a reachable target, a paint that matches the
+state — and every one of those is invisible to the type system and to the arch
+tier, which can only see that the class string mentions `hover:`, never that
+the control still works.
+
+So: one `src/__tests__/components/<tier>/<name>.spec.ts` per shared component,
+in the browser tier, folding in the four oracles a primitive can be held to.
+`atomSwitch.spec.ts` is the worked example and runs all four:
+
+| Oracle        | What it catches                                                        |
+| ------------- | ---------------------------------------------------------------------- |
+| axe           | a rule the screen sweeps never reach, because no sweep mounts this     |
+| ARIA snapshot | the tree an assistive technology is handed, plus the role-state filter |
+| real input    | pointer and keyboard both arrive, and a disabled control stays put     |
+| geometry      | the paint moved with the state, the only signal a sighted user gets    |
+
+Four rules about the shape, each of them a thing that went wrong first:
+
+- **One file, not four.** Upstream reka splits these across
+  `<Name>.browser.test.ts`, `<Name>.aria.browser.test.ts`,
+  `<Name>.interactions.browser.test.ts` and a screenshot sheet, because there
+  the component _is_ the product. Here a primitive is a means to a screen, and
+  a reader asking what `AtomSwitch` promises should find the whole answer in
+  one place.
+- **No per-component screenshots.** The visual tier stays what it is: three
+  whole-app frames. A variant grid per primitive is a baseline-maintenance job
+  the size of the component library, and the geometry assertion above already
+  catches the case that actually breaks — paint that stopped tracking state.
+- **The ARIA snapshot is inline.** Screen trees in `a11y/ariaStructure.spec.ts`
+  earn a `__snapshots__/` file; a primitive's tree is four lines, and a reader
+  should not open a second file to see it.
+- **Pair the snapshot with a role-state filter.** A snapshot says the tree
+  contains a checked switch. Only `getByRole('switch', { checked: true })
+  .elements()` having length 1 says the state is on that node and on _no
+  other_. A primitive that stamps `aria-checked` on its thumb as well as its
+  root passes the first and fails the second.
+
+The atoms and the parts of a compound primitive stay out of the a11y ledger
+(`__tests__/a11y/coverage.ts`, enforced by `a11yCoverage.test.ts`) — that tier
+sweeps screens, and per-control a11y belongs in the spec that renders the
+control. This section is what covers them instead.
+
+Behaviour a primitive _adds_ still gets its own assertion in that same file:
+`dialogContent.spec.ts` covers the scroll region surviving a keyboard-shrunk
+viewport. See [testing-strategy.md](testing-strategy.md).
+
+### Two things the first pass turned up
+
+Both are recorded here rather than fixed, because both are product decisions
+rather than defects, and the specs are written to stay honest about that.
+
+**A read-only scroll region has no keyboard user.** Axe's
+`scrollable-region-focusable` fires on `TemplatePageLayout`'s content region
+when nothing inside it can take focus: a keyboard user has no way to scroll it.
+Every page the template carries today has controls, so nothing is shipping
+broken and `templatePageLayout.spec.ts` mounts a page-shaped harness that has
+them. A long read-only page — a changelog, a privacy note — would trip it. The
+fix when that page arrives is `tabindex="0"` on the region, which adds a tab
+stop to every page that uses the template; that is the trade to weigh then.
+
+**`MoleculeDialogFooter` and its own comment disagree.** The comment says the
+reversal puts "the confirming action under the thumb and the dismissive one
+above it". With shadcn's canonical markup order — Cancel first, the action
+second — `flex-col-reverse` does the opposite: the first child lands at the
+bottom, so Cancel is the one under the thumb. Measured, not reasoned about; the
+app never exercises it, because the only footer it renders has one button in
+it. So `dialog.spec.ts` asserts the mechanism (below `sm:` the second control
+renders above the first; from `sm:` up they agree) and not the intent. Decide
+which control belongs under the thumb, then make the comment and the test say
+that.
 
 ## Composition over configuration
 
