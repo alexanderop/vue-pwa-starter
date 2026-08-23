@@ -11,6 +11,7 @@ export default {
     },
     aria: {
       goBack: 'Go back',
+      loading: 'Loading',
     },
   },
   quickAdd: {

@@ -2,6 +2,7 @@
 import { Pin, PinOff, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AtomBadge from '@/components/atoms/AtomBadge.vue'
 import AtomButton from '@/components/atoms/AtomButton.vue'
 import type { Note } from '@/db'
 import { useNoteAge } from '../useNoteAge'
@@ -31,7 +32,14 @@ const ageLabel = computed(() => {
   <article class="rounded-lg border bg-card p-4 shadow-xs">
     <div class="flex items-start gap-1">
       <div class="min-w-0 flex-1">
-        <p v-if="note.pinned" class="text-xs font-medium text-primary">{{ t('notes.pinned') }}</p>
+        <!-- A badge rather than a coloured line of text: pinned is a state of
+             the note, and it reads as one next to the count and sync markers
+             this card will grow. `mb-1` because the badge sits on the heading
+             otherwise — the paragraph it replaced had a line box, an
+             inline-flex does not. -->
+        <AtomBadge v-if="note.pinned" variant="secondary" class="mb-1">
+          {{ t('notes.pinned') }}
+        </AtomBadge>
         <!-- h2, not h3: the note list sits directly under the page's h1 with no
              section heading between them, so h3 would skip a level. axe reports
              that as `heading-order`, and the a11y tier only sees it when a card

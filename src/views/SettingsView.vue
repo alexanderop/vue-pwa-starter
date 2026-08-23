@@ -7,6 +7,8 @@ import TemplatePageLayout from '@/components/templates/TemplatePageLayout.vue'
 import OrganismPwaInstallDialog from '@/components/organisms/OrganismPwaInstallDialog.vue'
 import AtomButton from '@/components/atoms/AtomButton.vue'
 import AtomLabel from '@/components/atoms/AtomLabel.vue'
+import AtomSelect from '@/components/atoms/AtomSelect.vue'
+import AtomSpinner from '@/components/atoms/AtomSpinner.vue'
 import AtomSwitch from '@/components/atoms/AtomSwitch.vue'
 import { useAtomSet } from '@effect/atom-vue'
 import { useInstallPrompt } from '@/composables/useInstallPrompt'
@@ -46,17 +48,24 @@ function localeName(code: SupportedLocale): string {
   return t('settings.language.nativeName', {}, { locale: code })
 }
 
-function handleLocaleChange(event: Event): void {
-  // SAFETY: the handler is bound to `<select>`'s own change event in this
-  // component's template, so the target is that element. `setLocale` then
-  // re-checks the value against SUPPORTED_LOCALES and falls back — the
-  // assertion is a shape claim, not a validity one.
-  const value = (event.target as HTMLSelectElement).value
+function handleLocaleChange(value: string): void {
   // SAFETY: `setLocale` re-checks the value against SUPPORTED_LOCALES and
   // falls back to the default, so this narrows the argument type without
-  // claiming the string has been validated.
+  // claiming the string has been validated. AtomSelect's model is a plain
+  // string — the options it was given are this component's business, not the
+  // primitive's.
   setLocale(value as SupportedLocale)
 }
+
+/**
+ * Whether a backup is in flight, per direction rather than shared: two
+ * buttons sit side by side, and one flag would spin the one the user did not
+ * tap. A full database read and a `readAsText` over a large backup are both
+ * long enough to look like nothing happened — which, in a local-first app, is
+ * indistinguishable from the export silently failing.
+ */
+const exporting = ref(false)
+const importing = ref(false)
 
 /**
  * Reading the database and handing the file to the browser are two steps that
@@ -66,17 +75,22 @@ function handleLocaleChange(event: Event): void {
  *
  * The runDb promise is returned to Vue: with every failure caught by tag, a
  * rejection can only be a defect, and Vue routes it to
- * `app.config.errorHandler` — but only for promises it is handed.
+ * `app.config.errorHandler` — but only for promises it is handed. `.finally`
+ * rather than a `try`/`finally` around an `await` keeps that handover intact:
+ * it clears the flag and passes the same settled promise on.
  */
 function handleExport(): Promise<void> {
   const failed = reportFailure('export backup', t('settings.data.exportError'))
+  exporting.value = true
 
   return runDb(
     exportData.pipe(
       Effect.flatMap(downloadBackup),
       Effect.catchTags({ 'Db.DatabaseError': failed, 'BackupFile.BackupFileError': failed }),
     ),
-  )
+  ).finally(() => {
+    exporting.value = false
+  })
 }
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -90,6 +104,7 @@ async function handleImportFile(event: Event): Promise<void> {
   if (!file) return
 
   const failed = reportFailure('import backup', t('settings.data.importError'))
+  importing.value = true
 
   // Read the file, validate it as a backup, write it — one program, three
   // distinct ways to fail, matched by tag: a payload that is not a backup
@@ -107,7 +122,9 @@ async function handleImportFile(event: Event): Promise<void> {
         'Db.DatabaseError': failed,
       }),
     ),
-  )
+  ).finally(() => {
+    importing.value = false
+  })
 }
 </script>
 
@@ -127,16 +144,15 @@ async function handleImportFile(event: Event): Promise<void> {
         <div class="rounded-lg border p-4">
           <AtomLabel class="flex flex-col gap-2" for="locale-select">
             {{ t('settings.language.label') }}
-            <select
+            <AtomSelect
               id="locale-select"
-              class="h-touch-target rounded-md border border-input bg-transparent px-3 text-base"
-              :value="locale"
-              @change="handleLocaleChange"
+              :model-value="locale"
+              @update:model-value="handleLocaleChange"
             >
               <option v-for="code in supportedLocales" :key="code" :value="code">
                 {{ localeName(code) }}
               </option>
-            </select>
+            </AtomSelect>
           </AtomLabel>
         </div>
       </section>
@@ -169,12 +185,14 @@ async function handleImportFile(event: Event): Promise<void> {
         <div class="flex flex-col gap-4 rounded-lg border p-4">
           <p class="text-sm text-muted-foreground">{{ t('settings.data.description') }}</p>
           <div class="flex flex-wrap gap-2">
-            <AtomButton variant="outline" @click="handleExport">
-              <Download />
+            <AtomButton variant="outline" :disabled="exporting" @click="handleExport">
+              <AtomSpinner v-if="exporting" />
+              <Download v-else />
               {{ t('settings.data.export') }}
             </AtomButton>
-            <AtomButton variant="outline" @click="fileInput?.click()">
-              <Upload />
+            <AtomButton variant="outline" :disabled="importing" @click="fileInput?.click()">
+              <AtomSpinner v-if="importing" />
+              <Upload v-else />
               {{ t('settings.data.import') }}
             </AtomButton>
             <!-- eslint-disable-next-line vue/no-restricted-html-elements -- AtomInput is a `defineModel<string>` text field; a file input has no string value to bind and this one is `hidden` anyway, driven entirely by the button above it. There is nothing here for the primitive to style. -->

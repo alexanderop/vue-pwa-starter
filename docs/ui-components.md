@@ -217,16 +217,18 @@ imports, including in `.vue` files:
   rather than depend on it.
 
 ESLint also covers the cheaper way around that boundary, in the
-`app/no-raw-elements` scope: `<button>`, `<input>`, `<textarea>` and `<label>`
-are errors in any `.vue` outside a primitive
+`app/no-raw-elements` scope: `<button>`, `<input>`, `<textarea>`, `<label>`
+and `<select>` are errors in any `.vue` outside a primitive
 (`vue/no-restricted-html-elements`). Restricting the import only stops someone
 reaching past `AtomButton` to reka-ui; it does nothing about skipping the
 primitive entirely and writing the element, which has no import to restrict
 and is the version that actually happens. It is also the more expensive one —
 a bare `<button>` has no touch floor, no press feedback, no
 `touch-manipulation` and no focus ring, and looks correct on a desktop review.
-The list is only elements a primitive owns; `<select>` is absent because there
-is no `AtomSelect` to send anyone to.
+The list is only elements a primitive owns. `<select>` joined it the day
+`AtomSelect` existed and not a day earlier: a rule that names an element and
+sends the reader to a primitive that does not exist is worse than no rule,
+because the only way past it is a suppression comment.
 
 This has to be ESLint rather than the `anti-slop` oxlint plugin next door.
 oxlint hands a JS plugin a `.vue` file as its `<script>` block alone — no
@@ -380,8 +382,9 @@ collapsing back into a flag-configured monolith over time.
 ### When not to reach for it
 
 A primitive with one shape and no state does not need a provider and parts.
-`<AtomInput>`, `<AtomLabel>`, `<AtomTextarea>` are single components on
-purpose, and therefore single files. Build the compound version when a real
+`<AtomInput>`, `<AtomLabel>`, `<AtomTextarea>`, `<AtomBadge>`,
+`<AtomSkeleton>` and `<AtomSpinner>` are single components on purpose, and
+therefore single files. Build the compound version when a real
 second variant exists, not in anticipation of one.
 
 ## Where this codebase deviates from upstream shadcn-vue
@@ -402,7 +405,20 @@ upstream file:
   because reka already implements that model, and two owners of one value drift.
 - **Strings come from i18n.** Upstream hard-codes `"Close"`; this project
   requires every user-facing string in `src/i18n/messages/*`, so
-  `MoleculeDialogContent` uses `useI18n()`.
+  `MoleculeDialogContent` uses `useI18n()`, and so does `AtomSpinner` for the
+  name on its `role="status"`.
+- **`AtomSelect` wraps the native `<select>`, not reka's `Select`.** Upstream
+  ships both; this app takes the `native-select` shape and does not have the
+  other. Reka's `Select` is the better desktop control and the worse phone
+  one: it replaces the OS picker the user already knows with a portalled
+  listbox, and puts a second overlay into a screen whose sheets are already
+  negotiating with `--keyboard-inset`. Only the root is copied — `<option>`
+  is written at the call site rather than wrapped, which is what keeps the
+  primitive one file and therefore an atom.
+- **`AtomSkeleton` is `aria-hidden`.** Upstream leaves it in the tree. A grey
+  box exposes nothing worth announcing, and a list of them announces nothing
+  eight times; the state belongs on the region that owns the loading, as
+  `aria-busy` — see `NotesView.vue`.
 - **Touch-target sizing, and a press state on the base.** Sizes resolve
   `--spacing-touch-target` and collapse to upstream's tighter heights only
   under `pointer-fine:`; the base carries `active:scale-[0.97]`,

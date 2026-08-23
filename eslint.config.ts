@@ -178,9 +178,9 @@ const NO_SHADCN = {
  * hard-won). A bare `<button>` has none of them and looks fine on a desktop
  * review.
  *
- * Only elements a primitive genuinely owns are listed. `<select>` is absent
- * because there is no AtomSelect to send anyone to — add the element here the
- * day the primitive exists, not before.
+ * Only elements a primitive genuinely owns are listed. `<select>` joined the
+ * list the day AtomSelect existed and not before — the rule is a signpost,
+ * and one pointing nowhere is worse than none.
  */
 const WRAPPED_ELEMENTS = [
   {
@@ -202,6 +202,12 @@ const WRAPPED_ELEMENTS = [
     element: 'label',
     primitive: 'AtomLabel',
     loses: "reka's click-to-focus wiring and the peer-disabled styling",
+  },
+  {
+    element: 'select',
+    primitive: 'AtomSelect',
+    loses:
+      'the touch-height control, the focus ring, and the chevron that tells a user this opens a picker at all',
   },
 ] as const
 

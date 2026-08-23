@@ -17,8 +17,9 @@ into four directories that get progressively less reusable and more specific:
 
 ```text
 src/components/
-  atoms/      AtomButton.vue  AtomInput.vue  AtomLabel.vue
-              AtomSwitch.vue  AtomTextarea.vue
+  atoms/      AtomBadge.vue   AtomButton.vue  AtomInput.vue
+              AtomLabel.vue   AtomSelect.vue  AtomSkeleton.vue
+              AtomSpinner.vue AtomSwitch.vue  AtomTextarea.vue
   molecules/  dialog/MoleculeDialog.vue + 8 parts
               MoleculePageHeader.vue  MoleculePwaUpdatePrompt.vue
               MoleculeToastViewport.vue
@@ -41,7 +42,7 @@ The question is not "how big is it" but **what does it stop working without**.
 
 | Tier          | Works on its own given                             | Examples                                                                            |
 | ------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **atoms**     | props alone                                        | `AtomButton`, `AtomInput`, `AtomLabel`, `AtomSwitch`, `AtomTextarea`                |
+| **atoms**     | props alone                                        | `AtomButton`, `AtomInput`, `AtomSelect`, `AtomBadge`, `AtomSpinner`                 |
 | **molecules** | props, plus a couple of atoms it composes          | `dialog/`, `MoleculePageHeader`, `MoleculePwaUpdatePrompt`, `MoleculeToastViewport` |
 | **organisms** | a place in the app — routes, a store, a composable | `OrganismAppShell`, `OrganismPwaInstallPrompt`, `OrganismPwaInstallDialog`          |
 | **templates** | a page's slots filled in                           | `TemplatePageLayout`                                                                |

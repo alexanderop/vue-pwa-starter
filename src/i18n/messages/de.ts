@@ -13,6 +13,7 @@ const de: MessageSchema = {
     },
     aria: {
       goBack: 'Zurück',
+      loading: 'Wird geladen',
     },
   },
   quickAdd: {
